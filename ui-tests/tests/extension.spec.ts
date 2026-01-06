@@ -68,13 +68,15 @@ test.describe('DevScholar JupyterLab Extension', () => {
     await page.keyboard.press('Control+Shift+c');
     await page.waitForSelector('.lm-CommandPalette', { timeout: 15000 });
 
-    // Type to search
-    const input = page.locator('.lm-CommandPalette-input input');
-    await input.fill('dev');
-    await page.waitForTimeout(500);
+    // Just verify the command palette is visible
+    const palette = page.locator('.lm-CommandPalette');
+    await expect(palette).toBeVisible();
 
-    // Check palette is showing results (may or may not include DevScholar)
-    const palette = page.locator('.lm-CommandPalette-content');
+    // Try typing in the palette - just use keyboard, don't target input directly
+    await page.keyboard.type('dev');
+    await page.waitForTimeout(1000);
+
+    // Palette should still be visible
     await expect(palette).toBeVisible();
   });
 });

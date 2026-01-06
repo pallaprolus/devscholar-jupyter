@@ -61,9 +61,9 @@ export class PaperHighlighter {
     }
 
     /**
-     * Create a highlight decoration element
+     * Create a highlight decoration element (for future use with inline decorations)
      */
-    private createHighlightElement(paper: PaperReference): HTMLElement {
+    private _createHighlightElement(paper: PaperReference): HTMLElement {
         const el = document.createElement('span');
         el.className = HIGHLIGHT_CLASS;
         el.setAttribute('data-paper-type', paper.type);

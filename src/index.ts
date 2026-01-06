@@ -14,8 +14,8 @@ import { Cell, CodeCell, MarkdownCell } from '@jupyterlab/cells';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
 import { ICommandPalette } from '@jupyterlab/apputils';
 
-import { PaperParser, PaperReference, paperParser } from './paperParser';
-import { MetadataClient, PaperMetadata, metadataClient } from './metadataClient';
+import { PaperReference, paperParser } from './paperParser';
+import { PaperMetadata, metadataClient } from './metadataClient';
 import { PaperHighlighter } from './highlighter';
 import { PaperTooltip } from './tooltip';
 
@@ -48,17 +48,16 @@ async function activateExtension(
 
     // Initialize highlighter and tooltip
     const highlighter = new PaperHighlighter();
-    const tooltip = new PaperTooltip();
+    const _tooltip = new PaperTooltip(); // Will be used for hover functionality
 
     // Track active papers per notebook
     const notebookPapers = new Map<NotebookPanel, Map<string, PaperReference[]>>();
 
     // Load settings if available
-    let settings: ISettingRegistry.ISettings | null = null;
     if (settingRegistry) {
         try {
-            settings = await settingRegistry.load(EXTENSION_ID);
-            console.log('DevScholar settings loaded');
+            const _settings = await settingRegistry.load(EXTENSION_ID);
+            console.log('DevScholar settings loaded:', _settings.composite);
         } catch (error) {
             console.warn('Failed to load DevScholar settings:', error);
         }

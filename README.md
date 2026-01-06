@@ -4,8 +4,6 @@
 
 DevScholar automatically detects research paper references (arXiv, DOI, IEEE, Semantic Scholar) in your Jupyter notebooks and provides rich metadata on hover, PDF preview, and citation management.
 
-![DevScholar JupyterLab Demo](https://github.com/pallaprolus/devscholar-jupyter/raw/main/demo.gif)
-
 ## Features
 
 ### 1. Automatic Paper Detection
@@ -36,7 +34,7 @@ Paper references are automatically underlined with color-coded indicators by sou
 ### Prerequisites
 - JupyterLab >= 4.0
 
-### Install from PyPI (coming soon)
+### Install from PyPI
 ```bash
 pip install devscholar-jupyter
 ```

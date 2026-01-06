@@ -84,3 +84,8 @@ tsconfig.tsbuildinfo
 
 # Build artifacts
 *.vsix
+
+# Yarn
+.yarn/cache
+.yarn/install-state.gz
+.yarn/unplugged

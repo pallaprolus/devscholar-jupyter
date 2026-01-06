@@ -42,8 +42,53 @@ jobs:
             echo "should_publish=false" >> $GITHUB_OUTPUT
           fi
 
-  build:
+  test:
     needs: check-version
+    if: needs.check-version.outputs.should_publish == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Python dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build hatch hatch-jupyter-builder hatch-nodejs-version jupyterlab>=4.0.0
+
+      - name: Install Node dependencies and build
+        run: |
+          jlpm install || true
+          jlpm build:lib:prod
+
+      - name: Build and install extension
+        run: |
+          jupyter labextension build .
+          pip install -e .
+
+      - name: Install Playwright
+        working-directory: ui-tests
+        run: |
+          npm install
+          npx playwright install chromium --with-deps
+
+      - name: Run UI tests
+        working-directory: ui-tests
+        run: npm test
+        env:
+          CI: true
+
+  build:
+    needs: [check-version, test]
     if: needs.check-version.outputs.should_publish == 'true'
     runs-on: ubuntu-latest
     steps:
@@ -83,7 +128,7 @@ jobs:
           path: dist/
 
   publish:
-    needs: [check-version, build]
+    needs: [check-version, test, build]
     runs-on: ubuntu-latest
     permissions:
       id-token: write  # Required for trusted publishing

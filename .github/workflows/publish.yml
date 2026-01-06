@@ -1,0 +1,112 @@
+name: Publish to PyPI
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'package.json'
+  workflow_dispatch:
+
+jobs:
+  check-version:
+    runs-on: ubuntu-latest
+    outputs:
+      should_publish: ${{ steps.check.outputs.should_publish }}
+      version: ${{ steps.check.outputs.version }}
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
+
+      - name: Check if version changed
+        id: check
+        run: |
+          CURRENT_VERSION=$(node -p "require('./package.json').version")
+          echo "Current version: $CURRENT_VERSION"
+
+          git show HEAD~1:package.json > /tmp/old-package.json 2>/dev/null || echo '{"version":"0.0.0"}' > /tmp/old-package.json
+          PREVIOUS_VERSION=$(node -p "require('/tmp/old-package.json').version")
+          echo "Previous version: $PREVIOUS_VERSION"
+
+          if git rev-parse "v$CURRENT_VERSION" >/dev/null 2>&1; then
+            echo "Tag v$CURRENT_VERSION already exists, skipping"
+            echo "should_publish=false" >> $GITHUB_OUTPUT
+          elif [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ]; then
+            echo "Version changed from $PREVIOUS_VERSION to $CURRENT_VERSION"
+            echo "should_publish=true" >> $GITHUB_OUTPUT
+            echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
+          else
+            echo "Version unchanged, skipping publish"
+            echo "should_publish=false" >> $GITHUB_OUTPUT
+          fi
+
+  build:
+    needs: check-version
+    if: needs.check-version.outputs.should_publish == 'true'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+
+      - name: Install Python build dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install build hatch hatch-jupyter-builder hatch-nodejs-version jupyterlab>=4.0.0
+
+      - name: Install Node dependencies
+        run: |
+          npm install -g yarn
+          jlpm install
+
+      - name: Build extension
+        run: |
+          jlpm build:prod
+          python -m build
+
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    needs: [check-version, build]
+    runs-on: ubuntu-latest
+    permissions:
+      id-token: write  # Required for trusted publishing
+      contents: write  # Required for creating tags
+    environment:
+      name: pypi
+      url: https://pypi.org/p/devscholar-jupyter
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Download dist artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: dist
+          path: dist/
+
+      - name: Create git tag
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git tag -a "v${{ needs.check-version.outputs.version }}" -m "Release v${{ needs.check-version.outputs.version }}"
+          git push origin "v${{ needs.check-version.outputs.version }}"
+
+      - name: Publish to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
+        # No token needed - uses OIDC trusted publishing!

@@ -238,8 +238,15 @@ export class PaperTooltip {
                     ${metadata.pdfUrl ? `
                         <a href="${metadata.pdfUrl}" target="_blank"
                            style="color: var(--jp-brand-color1); text-decoration: none; font-size: 12px;">
-                            📥 PDF
+                            📥 PDF (Browser)
                         </a>
+                    ` : ''}
+                    ${metadata.pdfUrl ? `
+                        <button onclick="window.dispatchEvent(new CustomEvent('devscholar:preview-pdf', {detail: {paperId: '${metadata.id}', paperType: '${metadata.type}'}}))"
+                                style="background: none; border: none; color: var(--jp-brand-color1);
+                                       cursor: pointer; font-size: 12px; padding: 0;">
+                            👁️ Preview PDF
+                        </button>
                     ` : ''}
                     <button onclick="navigator.clipboard.writeText('${metadata.type}:${metadata.id}')"
                             style="background: none; border: none; color: var(--jp-brand-color1);

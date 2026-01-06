@@ -25,9 +25,35 @@ Hover over any paper reference to see:
 ### 3. Smart Highlighting
 Paper references are automatically underlined with color-coded indicators by source type.
 
-### 4. Citation Management
+### 4. Search & Cite
+Search for papers by name and insert citations directly into your notebook:
+- Use `Ctrl/Cmd+Shift+P` or Command Palette → "Search & Cite Paper"
+- Search by title, author, or keyword
+- Results from OpenAlex with citation counts
+- Inserts properly formatted citations
+
+### 5. PDF Preview
+Preview paper PDFs directly inside JupyterLab:
+- Click "Preview PDF" in hover tooltip
+- Navigate pages with keyboard arrows
+- Zoom in/out controls
+- Works with arXiv and open access papers
+
+### 6. Citation Management
 - **Export Bibliography**: Generate BibTeX for all papers in your notebook
-- **Search & Cite**: Find papers and insert citations (coming soon)
+
+### 7. Zotero Sync
+Two-way sync between your notebooks and Zotero library:
+- Export papers from notebooks to Zotero
+- Import citations from Zotero
+- Link workspaces to Zotero collections
+- Duplicate detection
+
+### 8. Mendeley Sync
+Two-way sync with Mendeley:
+- Export papers to Mendeley
+- Import citations from Mendeley
+- Link workspaces to Mendeley folders
 
 ## Installation
 
@@ -98,9 +124,9 @@ Configure via Settings → Advanced Settings Editor → DevScholar:
 - [x] Paper detection in code and markdown cells
 - [x] Hover metadata from arXiv, DOI, OpenAlex
 - [x] BibTeX export
-- [ ] Search & cite dialog
-- [ ] PDF preview panel
-- [ ] Zotero/Mendeley sync
+- [x] Search & cite dialog
+- [x] PDF preview panel
+- [x] Zotero/Mendeley sync
 - [ ] Google Colab support (browser extension)
 
 ## Contributing

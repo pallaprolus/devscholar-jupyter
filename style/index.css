@@ -100,17 +100,29 @@
 
 /* Search dialog styles */
 .devscholar-search-dialog {
-    max-width: 600px;
+    min-width: 550px;
+    max-width: 650px;
+}
+
+.devscholar-search-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+}
+
+.devscholar-search-input-wrapper {
+    position: relative;
 }
 
 .devscholar-search-input {
     width: 100%;
-    padding: 8px 12px;
+    padding: 10px 14px;
     border: 1px solid var(--jp-border-color1);
-    border-radius: 4px;
+    border-radius: 6px;
     font-size: 14px;
     background: var(--jp-layout-color0);
     color: var(--jp-ui-font-color0);
+    box-sizing: border-box;
 }
 
 .devscholar-search-input:focus {
@@ -119,37 +131,259 @@
     box-shadow: 0 0 0 2px rgba(var(--jp-brand-color1-rgb), 0.2);
 }
 
+.devscholar-search-loading {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    color: var(--jp-ui-font-color2);
+    font-size: 13px;
+    padding: 8px 0;
+}
+
+.devscholar-spinner {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border: 2px solid var(--jp-border-color2);
+    border-top-color: var(--jp-brand-color1);
+    border-radius: 50%;
+    animation: devscholar-spin 0.8s linear infinite;
+}
+
+@keyframes devscholar-spin {
+    to { transform: rotate(360deg); }
+}
+
 .devscholar-search-results {
-    max-height: 400px;
+    max-height: 350px;
     overflow-y: auto;
-    margin-top: 12px;
-}
-
-.devscholar-search-result {
-    padding: 12px;
     border: 1px solid var(--jp-border-color1);
-    border-radius: 4px;
-    margin-bottom: 8px;
-    cursor: pointer;
-    transition: background-color 0.2s ease;
+    border-radius: 6px;
+    background: var(--jp-layout-color1);
 }
 
-.devscholar-search-result:hover {
+.devscholar-search-result-item {
+    padding: 12px 14px;
+    border-bottom: 1px solid var(--jp-border-color1);
+    cursor: pointer;
+    transition: background-color 0.15s ease;
+}
+
+.devscholar-search-result-item:last-child {
+    border-bottom: none;
+}
+
+.devscholar-search-result-item:hover {
     background-color: var(--jp-layout-color2);
 }
 
-.devscholar-search-result-title {
+.devscholar-search-result-item.selected {
+    background-color: rgba(var(--jp-brand-color1-rgb), 0.15);
+    border-left: 3px solid var(--jp-brand-color1);
+    padding-left: 11px;
+}
+
+.devscholar-result-title {
     font-weight: 600;
+    font-size: 13px;
+    line-height: 1.4;
+    margin-bottom: 4px;
+    color: var(--jp-ui-font-color0);
+}
+
+.devscholar-result-authors {
+    font-size: 12px;
+    color: var(--jp-ui-font-color2);
     margin-bottom: 4px;
 }
 
-.devscholar-search-result-authors {
-    font-size: 12px;
+.devscholar-result-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 11px;
+    color: var(--jp-ui-font-color3);
+}
+
+.devscholar-result-meta-info {
     color: var(--jp-ui-font-color2);
 }
 
-.devscholar-search-result-meta {
+.devscholar-result-id {
+    font-family: var(--jp-code-font-family);
+    font-size: 10px;
+    background: var(--jp-layout-color2);
+    padding: 2px 6px;
+    border-radius: 3px;
+}
+
+.devscholar-search-hint {
     font-size: 11px;
     color: var(--jp-ui-font-color3);
-    margin-top: 4px;
+    text-align: center;
+}
+
+.devscholar-search-empty,
+.devscholar-search-error {
+    padding: 24px;
+    text-align: center;
+    color: var(--jp-ui-font-color2);
+    font-size: 13px;
+}
+
+.devscholar-search-error {
+    color: var(--jp-error-color1);
+}
+
+/* PDF Preview Styles */
+.devscholar-pdf-preview {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    background: #525659;
+}
+
+.devscholar-pdf-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    overflow: hidden;
+}
+
+.devscholar-pdf-toolbar {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 12px;
+    background: #323639;
+    color: white;
+    font-family: var(--jp-ui-font-family);
+    font-size: 13px;
+    flex-shrink: 0;
+}
+
+.devscholar-pdf-btn {
+    background: rgba(255, 255, 255, 0.1);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    color: white;
+    padding: 4px 12px;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 12px;
+    text-decoration: none;
+    transition: background-color 0.15s ease;
+}
+
+.devscholar-pdf-btn:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.devscholar-pdf-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.devscholar-pdf-page-info {
+    font-size: 13px;
+}
+
+.devscholar-pdf-zoom-level {
+    min-width: 50px;
+    text-align: center;
+}
+
+.devscholar-pdf-spacer {
+    flex: 1;
+}
+
+.devscholar-pdf-viewer {
+    flex: 1;
+    overflow: auto;
+    display: flex;
+    justify-content: center;
+    padding: 20px;
+}
+
+.devscholar-pdf-viewer canvas {
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    background: white;
+}
+
+.devscholar-pdf-loading {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: white;
+    font-family: var(--jp-ui-font-family);
+}
+
+.devscholar-pdf-spinner {
+    width: 40px;
+    height: 40px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: white;
+    border-radius: 50%;
+    animation: devscholar-spin 0.8s linear infinite;
+    margin-bottom: 16px;
+}
+
+.devscholar-pdf-loading-title {
+    font-size: 12px;
+    opacity: 0.7;
+    max-width: 400px;
+    text-align: center;
+    margin-top: 8px;
+}
+
+.devscholar-pdf-error {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    color: white;
+    font-family: var(--jp-ui-font-family);
+    text-align: center;
+    padding: 20px;
+}
+
+.devscholar-pdf-error-icon {
+    width: 48px;
+    height: 48px;
+    border: 3px solid #ff6b6b;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 24px;
+    font-weight: bold;
+    color: #ff6b6b;
+    margin-bottom: 16px;
+}
+
+.devscholar-pdf-error h3 {
+    margin: 0 0 8px 0;
+    font-size: 16px;
+}
+
+.devscholar-pdf-error p {
+    margin: 0 0 16px 0;
+    opacity: 0.8;
+    font-size: 13px;
+}
+
+.devscholar-pdf-error-link {
+    color: var(--jp-brand-color1);
+    text-decoration: none;
+    padding: 8px 16px;
+    border: 1px solid var(--jp-brand-color1);
+    border-radius: 4px;
+    transition: all 0.15s ease;
+}
+
+.devscholar-pdf-error-link:hover {
+    background: var(--jp-brand-color1);
+    color: white;
 }

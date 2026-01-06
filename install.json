@@ -1,0 +1,5 @@
+{
+    "packageManager": "python",
+    "packageName": "devscholar_jupyter",
+    "uninstallInstructions": "Use your Python package manager (pip, conda, etc.) to uninstall devscholar_jupyter"
+}

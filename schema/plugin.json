@@ -1,0 +1,53 @@
+{
+    "jupyter.lab.setting-icon": "ui-components:palette",
+    "jupyter.lab.setting-icon-label": "DevScholar",
+    "title": "DevScholar",
+    "description": "DevScholar JupyterLab Extension Settings",
+    "type": "object",
+    "properties": {
+        "highlightPapers": {
+            "type": "boolean",
+            "title": "Highlight Paper References",
+            "description": "Underline and highlight paper references in cells",
+            "default": true
+        },
+        "showTooltips": {
+            "type": "boolean",
+            "title": "Show Hover Tooltips",
+            "description": "Show paper metadata when hovering over references",
+            "default": true
+        },
+        "parseCodeCells": {
+            "type": "boolean",
+            "title": "Parse Code Cells",
+            "description": "Look for paper references in code cell comments",
+            "default": true
+        },
+        "parseMarkdownCells": {
+            "type": "boolean",
+            "title": "Parse Markdown Cells",
+            "description": "Look for paper references in markdown cells",
+            "default": true
+        },
+        "prefetchMetadata": {
+            "type": "boolean",
+            "title": "Prefetch Metadata",
+            "description": "Automatically fetch metadata for detected papers",
+            "default": true
+        },
+        "showPaperCount": {
+            "type": "boolean",
+            "title": "Show Paper Count",
+            "description": "Show paper count badge on cells with references",
+            "default": true
+        },
+        "cacheMaxAge": {
+            "type": "number",
+            "title": "Cache Max Age (days)",
+            "description": "How long to cache paper metadata",
+            "default": 7,
+            "minimum": 1,
+            "maximum": 30
+        }
+    }
+}

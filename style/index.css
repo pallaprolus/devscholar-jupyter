@@ -1,0 +1,155 @@
+/**
+ * DevScholar JupyterLab Extension Styles
+ */
+
+/* Cell with paper references indicator */
+.devscholar-has-papers {
+    position: relative;
+}
+
+.devscholar-has-papers::before {
+    content: '📚';
+    position: absolute;
+    left: -24px;
+    top: 8px;
+    font-size: 14px;
+    opacity: 0.7;
+}
+
+/* Paper reference highlight */
+.devscholar-paper-reference {
+    background-color: rgba(var(--jp-brand-color1-rgb), 0.15);
+    border-bottom: 2px solid var(--jp-brand-color1);
+    cursor: pointer;
+    padding: 0 2px;
+    border-radius: 2px;
+    transition: background-color 0.2s ease;
+}
+
+.devscholar-paper-reference:hover {
+    background-color: rgba(var(--jp-brand-color1-rgb), 0.25);
+}
+
+/* Paper type badges */
+.devscholar-paper-reference[data-paper-type="arxiv"] {
+    border-bottom-color: #b31b1b;
+}
+
+.devscholar-paper-reference[data-paper-type="doi"] {
+    border-bottom-color: #fcb426;
+}
+
+.devscholar-paper-reference[data-paper-type="ieee"] {
+    border-bottom-color: #00629b;
+}
+
+.devscholar-paper-reference[data-paper-type="semantic_scholar"] {
+    border-bottom-color: #1857b6;
+}
+
+.devscholar-paper-reference[data-paper-type="openalex"] {
+    border-bottom-color: #a50f15;
+}
+
+/* Tooltip styles */
+.devscholar-tooltip {
+    font-family: var(--jp-ui-font-family);
+}
+
+.devscholar-tooltip a:hover {
+    text-decoration: underline;
+}
+
+/* Paper count badge in cell */
+.devscholar-has-papers::after {
+    content: attr(data-devscholar-papers) ' paper(s)';
+    position: absolute;
+    right: 8px;
+    top: 8px;
+    font-size: 11px;
+    color: var(--jp-ui-font-color2);
+    background: var(--jp-layout-color2);
+    padding: 2px 6px;
+    border-radius: 10px;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.devscholar-has-papers:hover::after {
+    opacity: 1;
+}
+
+/* Dark mode adjustments */
+[data-jp-theme-light="false"] .devscholar-tooltip {
+    background: var(--jp-layout-color1);
+    border-color: var(--jp-border-color2);
+}
+
+/* CodeMirror integration - paper reference underline */
+.cm-devscholar-paper {
+    text-decoration: underline;
+    text-decoration-color: var(--jp-brand-color1);
+    text-decoration-style: dotted;
+    cursor: pointer;
+}
+
+.cm-devscholar-paper:hover {
+    text-decoration-style: solid;
+    background-color: rgba(var(--jp-brand-color1-rgb), 0.1);
+}
+
+/* Search dialog styles */
+.devscholar-search-dialog {
+    max-width: 600px;
+}
+
+.devscholar-search-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid var(--jp-border-color1);
+    border-radius: 4px;
+    font-size: 14px;
+    background: var(--jp-layout-color0);
+    color: var(--jp-ui-font-color0);
+}
+
+.devscholar-search-input:focus {
+    outline: none;
+    border-color: var(--jp-brand-color1);
+    box-shadow: 0 0 0 2px rgba(var(--jp-brand-color1-rgb), 0.2);
+}
+
+.devscholar-search-results {
+    max-height: 400px;
+    overflow-y: auto;
+    margin-top: 12px;
+}
+
+.devscholar-search-result {
+    padding: 12px;
+    border: 1px solid var(--jp-border-color1);
+    border-radius: 4px;
+    margin-bottom: 8px;
+    cursor: pointer;
+    transition: background-color 0.2s ease;
+}
+
+.devscholar-search-result:hover {
+    background-color: var(--jp-layout-color2);
+}
+
+.devscholar-search-result-title {
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+
+.devscholar-search-result-authors {
+    font-size: 12px;
+    color: var(--jp-ui-font-color2);
+}
+
+.devscholar-search-result-meta {
+    font-size: 11px;
+    color: var(--jp-ui-font-color3);
+    margin-top: 4px;
+}

@@ -68,7 +68,7 @@ jobs:
       - name: Install Node dependencies
         run: |
           npm install -g yarn
-          jlpm install
+          yarn install --mode=update-lockfile || yarn install
 
       - name: Build extension
         run: |

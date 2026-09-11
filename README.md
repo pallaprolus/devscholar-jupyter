@@ -162,7 +162,6 @@ Configure via Settings → Advanced Settings Editor → DevScholar:
 - [x] Search & cite dialog
 - [x] PDF preview panel
 - [x] Zotero/Mendeley sync
-- [ ] Google Colab support (browser extension)
 
 ## Contributing
 

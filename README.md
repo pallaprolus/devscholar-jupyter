@@ -163,9 +163,6 @@ Configure via Settings → Advanced Settings Editor → DevScholar:
 - [x] PDF preview panel
 - [x] Zotero/Mendeley sync
 
-## Contributing
-
-Contributions welcome! Please see [CONTRIBUTING.md](CONTRIBUTING.md) for guidelines.
 
 ## License
 

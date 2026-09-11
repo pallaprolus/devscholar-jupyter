@@ -7,13 +7,64 @@
     position: relative;
 }
 
-.devscholar-has-papers::before {
-    content: '📚';
+/* Paper count badge, bottom-right so it never overlaps the cell toolbar */
+.devscholar-has-papers::after {
+    content: '\1F4DA  ' attr(data-devscholar-papers) ' paper(s)';
     position: absolute;
-    left: -24px;
-    top: 8px;
-    font-size: 14px;
-    opacity: 0.7;
+    right: 8px;
+    bottom: 4px;
+    font-size: 11px;
+    line-height: 1.4;
+    color: var(--jp-ui-font-color2);
+    background: var(--jp-layout-color2);
+    border: 1px solid var(--jp-border-color2);
+    padding: 1px 6px;
+    border-radius: 10px;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.2s ease;
+    z-index: 1;
+}
+
+.devscholar-has-papers:hover::after {
+    opacity: 1;
+}
+
+body.devscholar-hide-count .devscholar-has-papers::after {
+    display: none;
+}
+
+/* "Show All Paper References" dialog */
+.devscholar-paper-list ol {
+    margin: 0;
+    padding-left: 20px;
+    max-height: 60vh;
+    overflow-y: auto;
+}
+
+.devscholar-paper-list li {
+    margin-bottom: 8px;
+    line-height: 1.4;
+}
+
+.devscholar-paper-list-meta {
+    color: var(--jp-ui-font-color2);
+    font-size: 12px;
+}
+
+.devscholar-bibtex-output {
+    width: 100%;
+    min-width: 480px;
+    min-height: 300px;
+    font-family: var(--jp-code-font-family);
+    font-size: 12px;
+    background: var(--jp-layout-color0);
+    color: var(--jp-ui-font-color0);
+    border: 1px solid var(--jp-border-color1);
+    border-radius: 4px;
+    padding: 8px;
+    box-sizing: border-box;
+    resize: vertical;
 }
 
 /* Paper reference highlight */
@@ -60,25 +111,6 @@
     text-decoration: underline;
 }
 
-/* Paper count badge in cell */
-.devscholar-has-papers::after {
-    content: attr(data-devscholar-papers) ' paper(s)';
-    position: absolute;
-    right: 8px;
-    top: 8px;
-    font-size: 11px;
-    color: var(--jp-ui-font-color2);
-    background: var(--jp-layout-color2);
-    padding: 2px 6px;
-    border-radius: 10px;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-}
-
-.devscholar-has-papers:hover::after {
-    opacity: 1;
-}
-
 /* Dark mode adjustments */
 [data-jp-theme-light="false"] .devscholar-tooltip {
     background: var(--jp-layout-color1);
@@ -87,15 +119,14 @@
 
 /* CodeMirror integration - paper reference underline */
 .cm-devscholar-paper {
-    text-decoration: underline;
-    text-decoration-color: var(--jp-brand-color1);
-    text-decoration-style: dotted;
-    cursor: pointer;
+    background-color: rgba(var(--jp-brand-color1-rgb), 0.08);
+    border-bottom: 2px solid var(--jp-brand-color1);
+    border-radius: 2px;
+    cursor: help;
 }
 
 .cm-devscholar-paper:hover {
-    text-decoration-style: solid;
-    background-color: rgba(var(--jp-brand-color1-rgb), 0.1);
+    background-color: rgba(var(--jp-brand-color1-rgb), 0.2);
 }
 
 /* Search dialog styles */
@@ -283,29 +314,22 @@
     cursor: not-allowed;
 }
 
-.devscholar-pdf-page-info {
-    font-size: 13px;
-}
-
-.devscholar-pdf-zoom-level {
-    min-width: 50px;
-    text-align: center;
+.devscholar-pdf-title {
+    font-weight: 600;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 60%;
 }
 
 .devscholar-pdf-spacer {
     flex: 1;
 }
 
-.devscholar-pdf-viewer {
+.devscholar-pdf-frame {
     flex: 1;
-    overflow: auto;
-    display: flex;
-    justify-content: center;
-    padding: 20px;
-}
-
-.devscholar-pdf-viewer canvas {
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.4);
+    width: 100%;
+    border: none;
     background: white;
 }
 

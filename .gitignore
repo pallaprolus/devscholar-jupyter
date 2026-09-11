@@ -89,3 +89,8 @@ tsconfig.tsbuildinfo
 .yarn/cache
 .yarn/install-state.gz
 .yarn/unplugged
+
+# Playwright artifacts
+ui-tests/test-results/
+ui-tests/playwright-report/
+ui-tests/devscholar-highlight-test.ipynb

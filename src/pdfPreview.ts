@@ -1,6 +1,6 @@
 /**
  * DevScholar PDF Preview Panel
- * Displays PDF papers in a JupyterLab panel using pdf.js
+ * Displays paper PDFs in a JupyterLab panel using the browser PDF viewer
  */
 
 import { Widget } from '@lumino/widgets';
@@ -12,6 +12,7 @@ import { PaperMetadata } from './metadataClient';
 export class PdfPreviewWidget extends Widget {
     private paper: PaperMetadata;
     private containerElement: HTMLDivElement;
+    private blobUrl: string | null = null;
 
     constructor(paper: PaperMetadata) {
         super();
@@ -38,7 +39,12 @@ export class PdfPreviewWidget extends Widget {
     }
 
     /**
-     * Load and render the PDF
+     * Load and render the PDF.
+     *
+     * The PDF is fetched as a blob and shown in an iframe so the browser's
+     * built-in viewer handles paging, zoom, search and text selection. When
+     * the host refuses cross-origin requests the iframe points at the URL
+     * directly, which works for hosts that allow framing.
      */
     private async loadPdf(): Promise<void> {
         if (!this.paper.pdfUrl) {
@@ -46,56 +52,71 @@ export class PdfPreviewWidget extends Widget {
             return;
         }
 
-        // Show loading state
         this.containerElement.innerHTML = this.getLoadingHtml();
 
+        let src = this.paper.pdfUrl;
         try {
-            // Fetch PDF as ArrayBuffer
-            const response = await fetch(this.paper.pdfUrl, {
-                headers: {
-                    'User-Agent': 'DevScholar/1.0 (JupyterLab Extension)'
-                }
-            });
-
+            const response = await fetch(this.paper.pdfUrl);
             if (!response.ok) {
-                throw new Error(`Failed to fetch PDF: ${response.statusText}`);
+                throw new Error(`Failed to fetch PDF: ${response.status} ${response.statusText}`);
             }
-
-            const arrayBuffer = await response.arrayBuffer();
-
-            // Convert to base64
-            const base64 = this.arrayBufferToBase64(arrayBuffer);
-
-            // Render the PDF viewer
-            this.containerElement.innerHTML = this.getViewerHtml(base64);
-
-            // Initialize pdf.js after the iframe loads
-            this.initializePdfJs();
-
+            const blob = await response.blob();
+            if (blob.type && !blob.type.includes('pdf') && !blob.type.includes('octet-stream')) {
+                throw new Error(`Unexpected content type: ${blob.type}`);
+            }
+            this.blobUrl = URL.createObjectURL(blob.type ? blob : new Blob([blob], { type: 'application/pdf' }));
+            src = this.blobUrl;
         } catch (error: any) {
-            console.error('Failed to load PDF:', error);
-            this.showError(error.message || 'Failed to load PDF');
+            // Cross-origin fetch refused; fall back to framing the URL directly
+            console.warn('DevScholar: direct PDF fetch failed, framing URL instead:', error?.message);
         }
+
+        this.renderViewer(src);
     }
 
     /**
-     * Convert ArrayBuffer to base64
+     * Render the toolbar and the iframe viewer
      */
-    private arrayBufferToBase64(buffer: ArrayBuffer): string {
-        let binary = '';
-        const bytes = new Uint8Array(buffer);
-        for (let i = 0; i < bytes.byteLength; i++) {
-            binary += String.fromCharCode(bytes[i]);
-        }
-        return btoa(binary);
+    private renderViewer(src: string): void {
+        this.containerElement.innerHTML = '';
+
+        const toolbar = document.createElement('div');
+        toolbar.className = 'devscholar-pdf-toolbar';
+
+        const title = document.createElement('span');
+        title.className = 'devscholar-pdf-title';
+        title.textContent = this.paper.title;
+        title.title = this.paper.title;
+
+        const spacer = document.createElement('span');
+        spacer.className = 'devscholar-pdf-spacer';
+
+        const open = document.createElement('a');
+        open.className = 'devscholar-pdf-btn';
+        open.href = this.paper.pdfUrl || '#';
+        open.target = '_blank';
+        open.rel = 'noopener';
+        open.textContent = 'Open in Browser';
+
+        toolbar.append(title, spacer, open);
+
+        const frame = document.createElement('iframe');
+        frame.className = 'devscholar-pdf-frame';
+        frame.src = src;
+        frame.title = this.paper.title;
+
+        this.containerElement.append(toolbar, frame);
     }
 
     /**
-     * Initialize pdf.js in the viewer
+     * Release the blob URL when the widget is disposed
      */
-    private initializePdfJs(): void {
-        // The pdf.js initialization happens in the iframe content
-        // Nothing additional needed here as the script is embedded
+    dispose(): void {
+        if (this.blobUrl) {
+            URL.revokeObjectURL(this.blobUrl);
+            this.blobUrl = null;
+        }
+        super.dispose();
     }
 
     /**
@@ -126,146 +147,6 @@ export class PdfPreviewWidget extends Widget {
                 <p>Loading PDF...</p>
                 <p class="devscholar-pdf-loading-title">${this.escapeHtml(this.paper.title)}</p>
             </div>
-        `;
-    }
-
-    /**
-     * Get the PDF viewer HTML with embedded pdf.js
-     */
-    private getViewerHtml(pdfBase64: string): string {
-        return `
-            <div class="devscholar-pdf-toolbar">
-                <button class="devscholar-pdf-btn" id="prev-page" title="Previous Page">
-                    <span>&#8592;</span> Previous
-                </button>
-                <span class="devscholar-pdf-page-info">
-                    Page <span id="page-num">1</span> of <span id="page-count">-</span>
-                </span>
-                <button class="devscholar-pdf-btn" id="next-page" title="Next Page">
-                    Next <span>&#8594;</span>
-                </button>
-                <span class="devscholar-pdf-spacer"></span>
-                <button class="devscholar-pdf-btn" id="zoom-out" title="Zoom Out">-</button>
-                <span class="devscholar-pdf-zoom-level" id="zoom-level">100%</span>
-                <button class="devscholar-pdf-btn" id="zoom-in" title="Zoom In">+</button>
-                <span class="devscholar-pdf-spacer"></span>
-                <a href="${this.paper.pdfUrl}" target="_blank" class="devscholar-pdf-btn" title="Open in Browser">
-                    Open in Browser
-                </a>
-            </div>
-            <div class="devscholar-pdf-viewer" id="pdf-viewer">
-                <canvas id="pdf-canvas"></canvas>
-            </div>
-            <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
-            <script>
-                (function() {
-                    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-                    const pdfData = atob("${pdfBase64}");
-                    const pdfBytes = new Uint8Array(pdfData.length);
-                    for (let i = 0; i < pdfData.length; i++) {
-                        pdfBytes[i] = pdfData.charCodeAt(i);
-                    }
-
-                    let pdfDoc = null;
-                    let pageNum = 1;
-                    let pageRendering = false;
-                    let pageNumPending = null;
-                    let scale = 1.0;
-
-                    const canvas = document.getElementById('pdf-canvas');
-                    const ctx = canvas.getContext('2d');
-                    const viewer = document.getElementById('pdf-viewer');
-
-                    function renderPage(num) {
-                        pageRendering = true;
-                        pdfDoc.getPage(num).then(function(page) {
-                            const viewport = page.getViewport({ scale: scale });
-                            canvas.height = viewport.height;
-                            canvas.width = viewport.width;
-
-                            const renderContext = {
-                                canvasContext: ctx,
-                                viewport: viewport
-                            };
-
-                            page.render(renderContext).promise.then(function() {
-                                pageRendering = false;
-                                if (pageNumPending !== null) {
-                                    renderPage(pageNumPending);
-                                    pageNumPending = null;
-                                }
-                            });
-                        });
-
-                        document.getElementById('page-num').textContent = num;
-                    }
-
-                    function queueRenderPage(num) {
-                        if (pageRendering) {
-                            pageNumPending = num;
-                        } else {
-                            renderPage(num);
-                        }
-                    }
-
-                    function updateZoomLevel() {
-                        document.getElementById('zoom-level').textContent = Math.round(scale * 100) + '%';
-                    }
-
-                    // Load PDF
-                    pdfjsLib.getDocument({ data: pdfBytes }).promise.then(function(pdf) {
-                        pdfDoc = pdf;
-                        document.getElementById('page-count').textContent = pdf.numPages;
-                        renderPage(pageNum);
-                    }).catch(function(error) {
-                        console.error('Error loading PDF:', error);
-                        viewer.innerHTML = '<div class="devscholar-pdf-error"><p>Failed to render PDF</p></div>';
-                    });
-
-                    // Navigation buttons
-                    document.getElementById('prev-page').addEventListener('click', function() {
-                        if (pageNum <= 1) return;
-                        pageNum--;
-                        queueRenderPage(pageNum);
-                    });
-
-                    document.getElementById('next-page').addEventListener('click', function() {
-                        if (pageNum >= pdfDoc.numPages) return;
-                        pageNum++;
-                        queueRenderPage(pageNum);
-                    });
-
-                    // Zoom buttons
-                    document.getElementById('zoom-in').addEventListener('click', function() {
-                        scale += 0.25;
-                        updateZoomLevel();
-                        queueRenderPage(pageNum);
-                    });
-
-                    document.getElementById('zoom-out').addEventListener('click', function() {
-                        if (scale <= 0.5) return;
-                        scale -= 0.25;
-                        updateZoomLevel();
-                        queueRenderPage(pageNum);
-                    });
-
-                    // Keyboard navigation
-                    document.addEventListener('keydown', function(e) {
-                        if (e.key === 'ArrowLeft' || e.key === 'ArrowUp') {
-                            if (pageNum > 1) {
-                                pageNum--;
-                                queueRenderPage(pageNum);
-                            }
-                        } else if (e.key === 'ArrowRight' || e.key === 'ArrowDown') {
-                            if (pageNum < pdfDoc.numPages) {
-                                pageNum++;
-                                queueRenderPage(pageNum);
-                            }
-                        }
-                    });
-                })();
-            </script>
         `;
     }
 

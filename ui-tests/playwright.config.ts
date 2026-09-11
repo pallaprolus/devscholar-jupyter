@@ -12,7 +12,7 @@ export default defineConfig({
     navigationTimeout: 60000
   },
   webServer: {
-    command: 'jupyter lab --no-browser --ServerApp.token="" --ServerApp.password=""',
+    command: 'jupyter lab --no-browser --ServerApp.token="" --ServerApp.password="" --LabApp.expose_app_in_browser=True',
     url: 'http://localhost:8888/lab',
     timeout: 180000,  // 3 min to start server
     reuseExistingServer: !process.env.CI

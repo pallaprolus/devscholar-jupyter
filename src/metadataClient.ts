@@ -1,6 +1,6 @@
 /**
  * DevScholar Metadata Client
- * Fetches paper metadata from various sources: arXiv, OpenAlex, Semantic Scholar, IEEE
+ * Fetches paper metadata from OpenAlex and Semantic Scholar (both allow browser requests)
  */
 
 import { PaperReference } from './paperParser';
@@ -90,64 +90,63 @@ export class MetadataClient {
     }
 
     /**
-     * Fetch arXiv paper metadata
+     * Fetch arXiv paper metadata.
+     *
+     * The arXiv API (export.arxiv.org) does not send CORS headers, so it
+     * cannot be called from the browser. Every arXiv paper has a DataCite DOI
+     * (10.48550/arXiv.<id>) and the DataCite API allows cross-origin
+     * requests, so it is used instead. DataCite has no citation counts, so
+     * arXiv records carry title, authors, year and abstract only. If the
+     * lookup fails a minimal record is returned so links and the PDF preview
+     * keep working.
      */
     private async fetchArxiv(id: string): Promise<PaperMetadata | null> {
+        const basic: PaperMetadata = {
+            id,
+            type: 'arxiv',
+            title: `arXiv:${id}`,
+            authors: [],
+            pdfUrl: `https://arxiv.org/pdf/${id}`,
+            url: `https://arxiv.org/abs/${id}`
+        };
+
+        let result: PaperMetadata = basic;
+
         try {
             const response = await fetch(
-                `https://export.arxiv.org/api/query?id_list=${id}&max_results=1`
+                `https://api.datacite.org/dois/${encodeURIComponent(`10.48550/arxiv.${id}`)}`,
+                { headers: { Accept: 'application/vnd.api+json' } }
             );
-
-            if (!response.ok) return null;
-
-            const xml = await response.text();
-            return this.parseArxivXml(xml, id);
+            if (response.ok) {
+                const attrs = (await response.json())?.data?.attributes ?? {};
+                const authors: string[] = (attrs.creators ?? []).map((c: any) => {
+                    if (c.givenName && c.familyName) {
+                        return `${c.givenName} ${c.familyName}`;
+                    }
+                    const name: string = c.name ?? '';
+                    // DataCite stores "Family, Given"
+                    const parts = name.split(',').map((p: string) => p.trim());
+                    return parts.length === 2 ? `${parts[1]} ${parts[0]}` : name;
+                });
+                const abstract = (attrs.descriptions ?? []).find(
+                    (d: any) => d.descriptionType === 'Abstract'
+                )?.description ?? attrs.descriptions?.[0]?.description;
+                result = {
+                    ...basic,
+                    title: attrs.titles?.[0]?.title || basic.title,
+                    authors,
+                    abstract: abstract || undefined,
+                    year: attrs.publicationYear || undefined,
+                    doi: attrs.doi || undefined
+                };
+            } else {
+                console.warn(`DevScholar: DataCite lookup for arXiv:${id} returned ${response.status}`);
+            }
         } catch (error) {
-            console.error('Failed to fetch arXiv metadata:', error);
-            return null;
+            console.warn('DevScholar: failed to fetch arXiv metadata from DataCite:', error);
         }
-    }
 
-    private parseArxivXml(xml: string, id: string): PaperMetadata | null {
-        try {
-            const parser = new DOMParser();
-            const doc = parser.parseFromString(xml, 'text/xml');
-
-            const entry = doc.querySelector('entry');
-            if (!entry) return null;
-
-            const title = entry.querySelector('title')?.textContent?.replace(/\s+/g, ' ').trim() || '';
-            const abstract = entry.querySelector('summary')?.textContent?.trim() || '';
-            const published = entry.querySelector('published')?.textContent || '';
-            const year = published ? new Date(published).getFullYear() : undefined;
-
-            const authors: string[] = [];
-            entry.querySelectorAll('author name').forEach(el => {
-                if (el.textContent) authors.push(el.textContent);
-            });
-
-            // Get PDF link
-            let pdfUrl: string | undefined;
-            entry.querySelectorAll('link').forEach(link => {
-                if (link.getAttribute('title') === 'pdf') {
-                    pdfUrl = link.getAttribute('href') || undefined;
-                }
-            });
-
-            return {
-                id,
-                type: 'arxiv',
-                title,
-                authors,
-                abstract,
-                year,
-                pdfUrl: pdfUrl || `https://arxiv.org/pdf/${id}.pdf`,
-                url: `https://arxiv.org/abs/${id}`
-            };
-        } catch (error) {
-            console.error('Failed to parse arXiv XML:', error);
-            return null;
-        }
+        return result;
     }
 
     /**
@@ -278,46 +277,21 @@ export class MetadataClient {
     }
 
     /**
-     * Fetch IEEE metadata (basic - IEEE API requires authentication for full access)
+     * IEEE metadata.
+     *
+     * IEEE Xplore document numbers are not indexed by any open API that
+     * allows browser requests, and the IEEE API needs a registered key. A
+     * minimal record with a link to IEEE Xplore is returned instead of
+     * issuing a request that always fails.
      */
     private async fetchIeee(id: string): Promise<PaperMetadata | null> {
-        // IEEE Xplore API requires registration, so we use OpenAlex as fallback
-        try {
-            const response = await fetch(
-                `https://api.openalex.org/works?filter=ids.ieee:${id}`,
-                {
-                    headers: {
-                        'Accept': 'application/json',
-                        'User-Agent': 'DevScholar/1.0 (mailto:pallaprolus@gmail.com)'
-                    }
-                }
-            );
-
-            if (!response.ok) return null;
-
-            const data = await response.json();
-            if (data.results && data.results.length > 0) {
-                return this.parseOpenAlexWork(data.results[0], 'ieee', id);
-            }
-
-            // Return basic info if not found
-            return {
-                id,
-                type: 'ieee',
-                title: `IEEE Document ${id}`,
-                authors: [],
-                url: `https://ieeexplore.ieee.org/document/${id}`
-            };
-        } catch (error) {
-            console.error('Failed to fetch IEEE metadata:', error);
-            return {
-                id,
-                type: 'ieee',
-                title: `IEEE Document ${id}`,
-                authors: [],
-                url: `https://ieeexplore.ieee.org/document/${id}`
-            };
-        }
+        return {
+            id,
+            type: 'ieee',
+            title: `IEEE Xplore document ${id}`,
+            authors: [],
+            url: `https://ieeexplore.ieee.org/document/${id}`
+        };
     }
 
     /**

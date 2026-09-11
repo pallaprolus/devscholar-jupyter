@@ -13,6 +13,11 @@ export class PaperTooltip {
     private tooltipElement: HTMLElement | null = null;
     private hideTimeout: number | null = null;
 
+    /**
+     * Whether hover tooltips are shown
+     */
+    enabled = true;
+
     constructor() {
         this.createTooltipElement();
         this.setupGlobalListeners();
@@ -59,6 +64,7 @@ export class PaperTooltip {
     private setupGlobalListeners(): void {
         // Listen for hover on elements with paper data attributes
         document.addEventListener('mouseover', async (event) => {
+            if (!this.enabled) return;
             const target = event.target as HTMLElement;
 
             // Check if this is a paper reference element

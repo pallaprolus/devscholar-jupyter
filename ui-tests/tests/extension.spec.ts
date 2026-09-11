@@ -1,5 +1,8 @@
 import { expect, test } from '@playwright/test';
 
+// JupyterLab binds the command palette to Accel+Shift+C: Meta on macOS, Control elsewhere
+const PALETTE_SHORTCUT = process.platform === 'darwin' ? 'Meta+Shift+c' : 'Control+Shift+c';
+
 // Helper function to wait for JupyterLab to load
 async function waitForJupyterLab(page: import('@playwright/test').Page) {
   await page.goto('/lab');
@@ -29,7 +32,7 @@ test.describe('DevScholar JupyterLab Extension', () => {
     await page.waitForTimeout(2000);
 
     // Open command palette using keyboard shortcut
-    await page.keyboard.press('Control+Shift+c');
+    await page.keyboard.press(PALETTE_SHORTCUT);
 
     // Wait for palette to open
     await page.waitForSelector('.lm-CommandPalette', { timeout: 15000 });
@@ -65,7 +68,7 @@ test.describe('DevScholar JupyterLab Extension', () => {
     await page.waitForTimeout(2000);
 
     // Open command palette
-    await page.keyboard.press('Control+Shift+c');
+    await page.keyboard.press(PALETTE_SHORTCUT);
     await page.waitForSelector('.lm-CommandPalette', { timeout: 15000 });
 
     // Just verify the command palette is visible

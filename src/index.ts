@@ -12,15 +12,18 @@ import {
 import { INotebookTracker, NotebookPanel } from '@jupyterlab/notebook';
 import { Cell, CodeCell, MarkdownCell } from '@jupyterlab/cells';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
-import { ICommandPalette } from '@jupyterlab/apputils';
+import { Dialog, ICommandPalette, Notification, showDialog } from '@jupyterlab/apputils';
+import { EditorExtensionRegistry, IEditorExtensionRegistry } from '@jupyterlab/codemirror';
 
 import { PaperReference, paperParser } from './paperParser';
 import { PaperMetadata, metadataClient } from './metadataClient';
 import { PaperHighlighter } from './highlighter';
+import { paperHighlightExtension } from './editorExtension';
 import { PaperTooltip } from './tooltip';
 import { showSearchCiteDialog, formatCitationForInsertion } from './searchCiteDialog';
 import { PdfPreviewManager } from './pdfPreview';
 import { MainAreaWidget, showErrorMessage } from '@jupyterlab/apputils';
+import { Widget } from '@lumino/widgets';
 import { zoteroSync, showCollectionSelector } from './zoteroSync';
 import { mendeleySync, showFolderSelector } from './mendeleySync';
 
@@ -36,7 +39,7 @@ const extension: JupyterFrontEndPlugin<void> = {
     id: EXTENSION_ID,
     autoStart: true,
     requires: [INotebookTracker],
-    optional: [ISettingRegistry, ICommandPalette],
+    optional: [ISettingRegistry, ICommandPalette, IEditorExtensionRegistry],
     activate: activateExtension
 };
 
@@ -47,23 +50,44 @@ async function activateExtension(
     app: JupyterFrontEnd,
     notebookTracker: INotebookTracker,
     settingRegistry: ISettingRegistry | null,
-    palette: ICommandPalette | null
+    palette: ICommandPalette | null,
+    editorExtensions: IEditorExtensionRegistry | null
 ): Promise<void> {
     console.log('DevScholar JupyterLab extension activated');
 
     // Initialize highlighter, tooltip, and PDF preview
     const highlighter = new PaperHighlighter();
-    const _tooltip = new PaperTooltip(); // Will be used for hover functionality
+    const tooltip = new PaperTooltip();
     const pdfPreviewManager = new PdfPreviewManager();
 
     // Track active papers per notebook
     const notebookPapers = new Map<NotebookPanel, Map<string, PaperReference[]>>();
 
+    // Underline references inside CodeMirror editors (code cells and
+    // markdown cells while editing). Rendered markdown is handled by the
+    // highlighter.
+    if (editorExtensions) {
+        editorExtensions.addExtension({
+            name: 'devscholar:paper-highlight',
+            factory: () => EditorExtensionRegistry.createImmutableExtension(paperHighlightExtension())
+        });
+    }
+
     // Load settings if available
     if (settingRegistry) {
         try {
-            const _settings = await settingRegistry.load(EXTENSION_ID);
-            console.log('DevScholar settings loaded:', _settings.composite);
+            const settings = await settingRegistry.load(EXTENSION_ID);
+            const applySettings = () => {
+                highlighter.enabled = settings.get('highlightPapers').composite as boolean ?? true;
+                tooltip.enabled = settings.get('showTooltips').composite as boolean ?? true;
+                document.body.classList.toggle(
+                    'devscholar-hide-count',
+                    (settings.get('showPaperCount').composite as boolean ?? true) === false
+                );
+            };
+            applySettings();
+            settings.changed.connect(applySettings);
+            console.log('DevScholar settings loaded:', settings.composite);
         } catch (error) {
             console.warn('Failed to load DevScholar settings:', error);
         }
@@ -91,12 +115,30 @@ async function activateExtension(
     /**
      * Process all cells in a notebook
      */
+    const watchedCells = new WeakSet<Cell>();
+
     async function processNotebook(panel: NotebookPanel): Promise<void> {
         const notebook = panel.content;
         const cellPapers = new Map<string, PaperReference[]>();
 
         // Parse each cell
         notebook.widgets.forEach((cell, index) => {
+            if (!watchedCells.has(cell)) {
+                watchedCells.add(cell);
+                let pending: number | null = null;
+                cell.model.contentChanged.connect(() => {
+                    if (pending !== null) {
+                        window.clearTimeout(pending);
+                    }
+                    pending = window.setTimeout(() => {
+                        pending = null;
+                        if (!cell.isDisposed) {
+                            onCellChanged(panel, cell);
+                        }
+                    }, 400);
+                });
+            }
+
             const papers = parseCell(cell);
             if (papers.length > 0) {
                 cellPapers.set(cell.model.id, papers);
@@ -188,28 +230,51 @@ async function activateExtension(
         execute: async () => {
             const current = notebookTracker.currentWidget;
             if (!current) {
-                console.log('No active notebook');
+                Notification.warning('DevScholar: open a notebook first', { autoClose: 3000 });
                 return;
             }
 
             const cellPapers = notebookPapers.get(current);
-            if (!cellPapers || cellPapers.size === 0) {
-                console.log('No paper references found');
+            const allPapers: PaperReference[] = cellPapers
+                ? Array.from(cellPapers.values()).flat()
+                : [];
+            if (allPapers.length === 0) {
+                Notification.info('DevScholar: no paper references found in this notebook', { autoClose: 3000 });
                 return;
             }
 
-            // Collect all papers with metadata
-            const allPapers: PaperReference[] = Array.from(cellPapers.values()).flat();
-            console.log(`Found ${allPapers.length} paper references:`);
-
+            const body = document.createElement('div');
+            body.className = 'devscholar-paper-list';
+            const list = document.createElement('ol');
+            body.appendChild(list);
             for (const paper of allPapers) {
-                const metadata = await metadataClient.fetchMetadata(paper);
-                if (metadata) {
-                    console.log(`- ${metadata.title} (${paper.type}:${paper.id})`);
-                } else {
-                    console.log(`- ${paper.type}:${paper.id}`);
-                }
+                const item = document.createElement('li');
+                item.textContent = `${paper.type}:${paper.id}`;
+                list.appendChild(item);
+                metadataClient.fetchMetadata(paper).then(metadata => {
+                    if (metadata && metadata.title) {
+                        item.textContent = '';
+                        const link = document.createElement('a');
+                        link.href = metadata.url || '#';
+                        link.target = '_blank';
+                        link.rel = 'noopener';
+                        link.textContent = metadata.title;
+                        item.appendChild(link);
+                        const meta = document.createElement('span');
+                        meta.className = 'devscholar-paper-list-meta';
+                        const authors = metadata.authors.slice(0, 3).join(', ') + (metadata.authors.length > 3 ? ' et al.' : '');
+                        meta.textContent = ` — ${[authors, metadata.year].filter(Boolean).join(', ')} (${paper.type}:${paper.id})`;
+                        item.appendChild(meta);
+                    }
+                }).catch(() => undefined);
             }
+
+            const widget = new Widget({ node: body });
+            await showDialog({
+                title: `Paper references (${allPapers.length})`,
+                body: widget,
+                buttons: [Dialog.okButton({ label: 'Close' })]
+            });
         }
     });
 
@@ -276,7 +341,7 @@ async function activateExtension(
 
             const cellPapers = notebookPapers.get(current);
             if (!cellPapers || cellPapers.size === 0) {
-                console.log('No paper references to export');
+                Notification.info('DevScholar: no paper references to export', { autoClose: 3000 });
                 return;
             }
 
@@ -292,8 +357,24 @@ async function activateExtension(
 
             // Copy to clipboard
             const bibtex = bibtexEntries.join('\n\n');
-            await navigator.clipboard.writeText(bibtex);
-            console.log('Bibliography copied to clipboard!');
+            try {
+                await navigator.clipboard.writeText(bibtex);
+                Notification.success(
+                    `DevScholar: copied ${bibtexEntries.length} BibTeX ${bibtexEntries.length === 1 ? 'entry' : 'entries'} to the clipboard`,
+                    { autoClose: 4000 }
+                );
+            } catch (error) {
+                console.warn('DevScholar: clipboard unavailable, showing BibTeX in a dialog', error);
+                const textarea = document.createElement('textarea');
+                textarea.className = 'devscholar-bibtex-output';
+                textarea.readOnly = true;
+                textarea.value = bibtex;
+                await showDialog({
+                    title: `BibTeX (${bibtexEntries.length} ${bibtexEntries.length === 1 ? 'entry' : 'entries'})`,
+                    body: new Widget({ node: textarea }),
+                    buttons: [Dialog.okButton({ label: 'Close' })]
+                });
+            }
         }
     });
 
@@ -333,7 +414,7 @@ async function activateExtension(
             }
 
             if (!paperId || !paperType) {
-                console.log('No paper with PDF found');
+                Notification.info('DevScholar: no paper with a PDF found in this notebook', { autoClose: 3000 });
                 return;
             }
 
@@ -348,12 +429,12 @@ async function activateExtension(
             const metadata = await metadataClient.fetchMetadata(paper);
 
             if (!metadata) {
-                console.log('Could not fetch paper metadata');
+                Notification.error('DevScholar: could not fetch paper metadata', { autoClose: 3000 });
                 return;
             }
 
             if (!metadata.pdfUrl) {
-                console.log('No PDF available for this paper');
+                Notification.info('DevScholar: no PDF available for this paper', { autoClose: 3000 });
                 return;
             }
 
@@ -370,7 +451,7 @@ async function activateExtension(
 
             // Wrap in MainAreaWidget and add to shell
             const mainWidget = new MainAreaWidget({ content: pdfWidget });
-            mainWidget.title.label = `PDF: ${metadata.title.substring(0, 30)}...`;
+            mainWidget.title.label = `PDF: ${metadata.title.length > 30 ? metadata.title.substring(0, 30) + '…' : metadata.title}`;
             mainWidget.title.closable = true;
             mainWidget.id = `devscholar-pdf-${metadata.type}-${metadata.id}`;
 
@@ -643,8 +724,29 @@ async function activateExtension(
         }
     });
 
+    // Links to the project
+    const REPO_URL = 'https://github.com/pallaprolus/devscholar-jupyter';
+    const openGithubCommandID = 'devscholar:open-github';
+    app.commands.addCommand(openGithubCommandID, {
+        label: 'Star DevScholar on GitHub',
+        caption: `Open ${REPO_URL} in a new tab`,
+        execute: () => {
+            window.open(REPO_URL, '_blank', 'noopener');
+        }
+    });
+    const reportIssueCommandID = 'devscholar:report-issue';
+    app.commands.addCommand(reportIssueCommandID, {
+        label: 'Report a DevScholar Issue',
+        caption: `Open ${REPO_URL}/issues in a new tab`,
+        execute: () => {
+            window.open(`${REPO_URL}/issues/new`, '_blank', 'noopener');
+        }
+    });
+
     // Add commands to palette
     if (palette) {
+        palette.addItem({ command: openGithubCommandID, category: 'DevScholar' });
+        palette.addItem({ command: reportIssueCommandID, category: 'DevScholar' });
         palette.addItem({ command: commandID, category: 'DevScholar' });
         palette.addItem({ command: searchCommandID, category: 'DevScholar' });
         palette.addItem({ command: exportBibCommandID, category: 'DevScholar' });

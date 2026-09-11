@@ -1,6 +1,6 @@
 {
   "name": "devscholar-jupyter",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "DevScholar for JupyterLab - Link research papers (arXiv, DOI, IEEE) directly in your notebooks with hover metadata and PDF preview",
   "keywords": [
     "jupyter",
@@ -57,6 +57,8 @@
     "watch:labextension": "jupyter labextension watch ."
   },
   "dependencies": {
+    "@codemirror/state": "^6.0.0",
+    "@codemirror/view": "^6.0.0",
     "@jupyterlab/application": "^4.0.0",
     "@jupyterlab/apputils": "^4.0.0",
     "@jupyterlab/cells": "^4.0.0",

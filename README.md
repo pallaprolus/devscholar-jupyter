@@ -1,8 +1,25 @@
 # DevScholar for JupyterLab
 
+[![PyPI](https://img.shields.io/pypi/v/devscholar-jupyter)](https://pypi.org/project/devscholar-jupyter/)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![Tests](https://github.com/pallaprolus/devscholar-jupyter/actions/workflows/test.yml/badge.svg)](https://github.com/pallaprolus/devscholar-jupyter/actions/workflows/test.yml)
+
 **Your Notebooks, Connected to Knowledge.**
 
 DevScholar automatically detects research paper references (arXiv, DOI, IEEE, Semantic Scholar) in your Jupyter notebooks and provides rich metadata on hover, PDF preview, and citation management.
+
+![Hover over a paper reference to see its title, authors, year and abstract](docs/images/hover-metadata.png)
+
+<details>
+<summary>More screenshots: PDF preview and Search &amp; Cite</summary>
+
+![Preview the PDF of a paper inside JupyterLab](docs/images/pdf-preview.png)
+
+![Search for a paper and insert a citation into the active cell](docs/images/search-and-cite.png)
+
+</details>
+
+If DevScholar saves you time, please ⭐ [star the repository](https://github.com/pallaprolus/devscholar-jupyter). It helps other researchers find it.
 
 ## Features
 
@@ -19,11 +36,17 @@ Hover over any paper reference to see:
 - Title & Authors
 - Abstract
 - Publication Year
-- Citation Count
+- Citation Count (DOI, OpenAlex and Semantic Scholar references)
 - Direct links to PDF and paper page
 
+Metadata comes from APIs that allow browser requests: DataCite for arXiv,
+OpenAlex for DOIs, and Semantic Scholar for Semantic Scholar IDs. IEEE
+document numbers are linked to IEEE Xplore without metadata, because no open
+API resolves them.
+
 ### 3. Smart Highlighting
-Paper references are automatically underlined with color-coded indicators by source type.
+Paper references are underlined with color-coded indicators by source type,
+both in rendered markdown and inside the cell editor.
 
 ### 4. Search & Cite
 Search for papers by name and insert citations directly into your notebook:
@@ -34,13 +57,13 @@ Search for papers by name and insert citations directly into your notebook:
 
 ### 5. PDF Preview
 Preview paper PDFs directly inside JupyterLab:
-- Click "Preview PDF" in hover tooltip
-- Navigate pages with keyboard arrows
-- Zoom in/out controls
-- Works with arXiv and open access papers
+- Click "Preview PDF" in the hover tooltip, or run "Preview Paper PDF"
+- Uses the browser's built-in PDF viewer (paging, zoom, search, text selection)
+- Works with arXiv and open access papers whose host allows browser downloads
 
 ### 6. Citation Management
-- **Export Bibliography**: Generate BibTeX for all papers in your notebook
+- **Show All Paper References**: A dialog listing every reference in the notebook with links
+- **Export Bibliography**: Copies BibTeX for all papers to the clipboard (shown in a dialog if the clipboard is unavailable)
 
 ### 7. Zotero Sync
 Two-way sync between your notebooks and Zotero library:
@@ -54,6 +77,9 @@ Two-way sync with Mendeley:
 - Export papers to Mendeley
 - Import citations from Mendeley
 - Link workspaces to Mendeley folders
+
+### 9. Help menu
+The Help menu gains two entries: **Star DevScholar on GitHub** and **Report a DevScholar Issue**. Both are also available from the command palette and the link is repeated in the DevScholar settings page.
 
 ## Installation
 

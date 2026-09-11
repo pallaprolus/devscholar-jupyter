@@ -1,8 +1,26 @@
 {
     "jupyter.lab.setting-icon": "ui-components:palette",
     "jupyter.lab.setting-icon-label": "DevScholar",
+    "jupyter.lab.menus": {
+        "main": [
+            {
+                "id": "jp-mainmenu-help",
+                "items": [
+                    {
+                        "type": "separator"
+                    },
+                    {
+                        "command": "devscholar:open-github"
+                    },
+                    {
+                        "command": "devscholar:report-issue"
+                    }
+                ]
+            }
+        ]
+    },
     "title": "DevScholar",
-    "description": "DevScholar JupyterLab Extension Settings",
+    "description": "DevScholar JupyterLab Extension Settings.\n\nIf DevScholar is useful to you, please star the project on GitHub: https://github.com/pallaprolus/devscholar-jupyter (Help menu > Star DevScholar on GitHub).",
     "type": "object",
     "properties": {
         "highlightPapers": {

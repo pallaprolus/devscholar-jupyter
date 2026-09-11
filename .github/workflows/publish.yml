@@ -33,8 +33,9 @@ jobs:
           if git rev-parse "v$CURRENT_VERSION" >/dev/null 2>&1; then
             echo "Tag v$CURRENT_VERSION already exists, skipping"
             echo "should_publish=false" >> $GITHUB_OUTPUT
-          elif [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ]; then
-            echo "Version changed from $PREVIOUS_VERSION to $CURRENT_VERSION"
+          elif [ "$CURRENT_VERSION" != "$PREVIOUS_VERSION" ] || [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            # Publish on a version bump, or on a manual run when the tag does not exist yet
+            echo "Publishing $CURRENT_VERSION (previous: $PREVIOUS_VERSION, event: ${{ github.event_name }})"
             echo "should_publish=true" >> $GITHUB_OUTPUT
             echo "version=$CURRENT_VERSION" >> $GITHUB_OUTPUT
           else

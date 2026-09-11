@@ -4,10 +4,7 @@
  * hover metadata, PDF preview, and citation management.
  */
 
-import {
-    JupyterFrontEnd,
-    JupyterFrontEndPlugin
-} from '@jupyterlab/application';
+import { JupyterFrontEnd, JupyterFrontEndPlugin } from '@jupyterlab/application';
 
 import { INotebookTracker, NotebookPanel } from '@jupyterlab/notebook';
 import { Cell, CodeCell, MarkdownCell } from '@jupyterlab/cells';
@@ -78,13 +75,22 @@ async function activateExtension(
         try {
             const settings = await settingRegistry.load(EXTENSION_ID);
             const applySettings = () => {
-                highlighter.enabled = settings.get('highlightPapers').composite as boolean ?? true;
-                tooltip.enabled = settings.get('showTooltips').composite as boolean ?? true;
+                highlighter.enabled = (settings.get('highlightPapers').composite as boolean) ?? true;
+                tooltip.enabled = (settings.get('showTooltips').composite as boolean) ?? true;
                 document.body.classList.toggle(
                     'devscholar-hide-count',
-                    (settings.get('showPaperCount').composite as boolean ?? true) === false
+                    ((settings.get('showPaperCount').composite as boolean) ?? true) === false
+                );
+                metadataClient.setSemanticScholarApiKey(
+                    (settings.get('semanticScholarApiKey').composite as string) ?? ''
                 );
             };
+            window.addEventListener('devscholar:s2-key-rejected', () => {
+                Notification.warning(
+                    'DevScholar: Semantic Scholar requests are failing, so the API key in the DevScholar settings is probably invalid. arXiv citation counts are disabled until the key is changed.',
+                    { autoClose: 8000 }
+                );
+            });
             applySettings();
             settings.changed.connect(applySettings);
             console.log('DevScholar settings loaded:', settings.composite);
@@ -122,7 +128,7 @@ async function activateExtension(
         const cellPapers = new Map<string, PaperReference[]>();
 
         // Parse each cell
-        notebook.widgets.forEach((cell, index) => {
+        notebook.widgets.forEach(cell => {
             if (!watchedCells.has(cell)) {
                 watchedCells.add(cell);
                 let pending: number | null = null;
@@ -235,9 +241,7 @@ async function activateExtension(
             }
 
             const cellPapers = notebookPapers.get(current);
-            const allPapers: PaperReference[] = cellPapers
-                ? Array.from(cellPapers.values()).flat()
-                : [];
+            const allPapers: PaperReference[] = cellPapers ? Array.from(cellPapers.values()).flat() : [];
             if (allPapers.length === 0) {
                 Notification.info('DevScholar: no paper references found in this notebook', { autoClose: 3000 });
                 return;
@@ -251,22 +255,27 @@ async function activateExtension(
                 const item = document.createElement('li');
                 item.textContent = `${paper.type}:${paper.id}`;
                 list.appendChild(item);
-                metadataClient.fetchMetadata(paper).then(metadata => {
-                    if (metadata && metadata.title) {
-                        item.textContent = '';
-                        const link = document.createElement('a');
-                        link.href = metadata.url || '#';
-                        link.target = '_blank';
-                        link.rel = 'noopener';
-                        link.textContent = metadata.title;
-                        item.appendChild(link);
-                        const meta = document.createElement('span');
-                        meta.className = 'devscholar-paper-list-meta';
-                        const authors = metadata.authors.slice(0, 3).join(', ') + (metadata.authors.length > 3 ? ' et al.' : '');
-                        meta.textContent = ` — ${[authors, metadata.year].filter(Boolean).join(', ')} (${paper.type}:${paper.id})`;
-                        item.appendChild(meta);
-                    }
-                }).catch(() => undefined);
+                metadataClient
+                    .fetchMetadata(paper)
+                    .then(metadata => {
+                        if (metadata && metadata.title) {
+                            item.textContent = '';
+                            const link = document.createElement('a');
+                            link.href = metadata.url || '#';
+                            link.target = '_blank';
+                            link.rel = 'noopener';
+                            link.textContent = metadata.title;
+                            item.appendChild(link);
+                            const meta = document.createElement('span');
+                            meta.className = 'devscholar-paper-list-meta';
+                            const authors =
+                                metadata.authors.slice(0, 3).join(', ') +
+                                (metadata.authors.length > 3 ? ' et al.' : '');
+                            meta.textContent = ` — ${[authors, metadata.year].filter(Boolean).join(', ')} (${paper.type}:${paper.id})`;
+                            item.appendChild(meta);
+                        }
+                    })
+                    .catch(() => undefined);
             }
 
             const widget = new Widget({ node: body });
@@ -382,7 +391,7 @@ async function activateExtension(
     const previewPdfCommandID = 'devscholar:preview-pdf';
     app.commands.addCommand(previewPdfCommandID, {
         label: 'Preview Paper PDF',
-        execute: async (args) => {
+        execute: async args => {
             // Get paper info from args or from current context
             let paperId = args?.paperId as string | undefined;
             let paperType = args?.paperType as string | undefined;
@@ -483,7 +492,10 @@ async function activateExtension(
         label: 'Sync Papers to Zotero',
         execute: async () => {
             if (!zoteroSync.isConfigured()) {
-                showErrorMessage('Zotero Not Configured', 'Please set your Zotero API key first using "Set Zotero API Key" command.');
+                showErrorMessage(
+                    'Zotero Not Configured',
+                    'Please set your Zotero API key first using "Set Zotero API Key" command.'
+                );
                 return;
             }
 
@@ -518,7 +530,9 @@ async function activateExtension(
             try {
                 const collectionKey = zoteroSync.getLinkedCollection() || undefined;
                 const result = await zoteroSync.syncPapers(papersWithMetadata, collectionKey);
-                console.log(`Zotero sync: ${result.success} synced, ${result.skipped} skipped, ${result.failed} failed`);
+                console.log(
+                    `Zotero sync: ${result.success} synced, ${result.skipped} skipped, ${result.failed} failed`
+                );
             } catch (error: any) {
                 showErrorMessage('Zotero Sync Error', error.message);
             }
@@ -649,7 +663,9 @@ async function activateExtension(
             try {
                 const folderId = mendeleySync.getLinkedFolder() || undefined;
                 const result = await mendeleySync.syncPapers(papersWithMetadata, folderId);
-                console.log(`Mendeley sync: ${result.success} synced, ${result.skipped} skipped, ${result.failed} failed`);
+                console.log(
+                    `Mendeley sync: ${result.success} synced, ${result.skipped} skipped, ${result.failed} failed`
+                );
             } catch (error: any) {
                 showErrorMessage('Mendeley Sync Error', error.message);
             }
@@ -773,6 +789,7 @@ async function activateExtension(
     // Listen for PDF preview requests from tooltip
     window.addEventListener('devscholar:preview-pdf', ((event: CustomEvent) => {
         const { paperId, paperType } = event.detail;
+        tooltip.hide();
         app.commands.execute(previewPdfCommandID, { paperId, paperType });
     }) as EventListener);
 

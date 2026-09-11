@@ -104,9 +104,7 @@ export class PaperHighlighter {
      */
     private wrapTextNode(textNode: Text): void {
         const text = textNode.textContent || '';
-        const refs = paperParser
-            .parseLine(text)
-            .sort((a, b) => a.columnNumber - b.columnNumber);
+        const refs = paperParser.parseLine(text).sort((a, b) => a.columnNumber - b.columnNumber);
         if (refs.length === 0) {
             return;
         }

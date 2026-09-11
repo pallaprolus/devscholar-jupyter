@@ -8,10 +8,12 @@
 
 DevScholar automatically detects research paper references (arXiv, DOI, IEEE, Semantic Scholar) in your Jupyter notebooks and provides rich metadata on hover, PDF preview, and citation management.
 
-![Hover over a paper reference to see its title, authors, year and abstract](docs/images/hover-metadata.png)
+![Hover a paper reference to see its metadata, then preview the PDF inside JupyterLab](docs/images/devscholar-demo.gif)
 
 <details>
-<summary>More screenshots: PDF preview and Search &amp; Cite</summary>
+<summary>Screenshots: hover metadata, PDF preview and Search &amp; Cite</summary>
+
+![Hover over a paper reference to see its title, authors, year and abstract](docs/images/hover-metadata.png)
 
 ![Preview the PDF of a paper inside JupyterLab](docs/images/pdf-preview.png)
 
@@ -43,6 +45,13 @@ Metadata comes from APIs that allow browser requests: DataCite for arXiv,
 OpenAlex for DOIs, and Semantic Scholar for Semantic Scholar IDs. IEEE
 document numbers are linked to IEEE Xplore without metadata, because no open
 API resolves them.
+
+**Citation counts for arXiv papers** need a free
+[Semantic Scholar API key](https://www.semanticscholar.org/product/api).
+Paste it into *Settings → Settings Editor → DevScholar → Semantic Scholar API
+Key*. Without a key Semantic Scholar rate-limits anonymous browser requests
+too aggressively to be usable, so arXiv references show title, authors, year
+and abstract only.
 
 ### 3. Smart Highlighting
 Paper references are underlined with color-coded indicators by source type,

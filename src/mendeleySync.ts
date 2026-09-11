@@ -117,7 +117,7 @@ export class MendeleySync {
         const token = this.getAccessToken();
         if (!token) return null;
         return {
-            'Authorization': `Bearer ${token}`,
+            Authorization: `Bearer ${token}`,
             'Content-Type': 'application/json'
         };
     }
@@ -271,7 +271,10 @@ export class MendeleySync {
     /**
      * Sync papers to Mendeley
      */
-    async syncPapers(papers: PaperMetadata[], folderId?: string): Promise<{ success: number; skipped: number; failed: number }> {
+    async syncPapers(
+        papers: PaperMetadata[],
+        folderId?: string
+    ): Promise<{ success: number; skipped: number; failed: number }> {
         const headers = this.getAuthHeaders();
         if (!headers) {
             throw new Error('Mendeley not configured');
@@ -284,9 +287,7 @@ export class MendeleySync {
         // Fetch existing documents for duplicate check
         let existingDocs: MendeleyDocument[] = [];
         try {
-            existingDocs = folderId
-                ? await this.fetchDocumentsFromFolder(folderId)
-                : await this.fetchAllDocuments();
+            existingDocs = folderId ? await this.fetchDocumentsFromFolder(folderId) : await this.fetchAllDocuments();
         } catch (e) {
             console.warn('Could not fetch existing documents:', e);
         }
@@ -350,8 +351,7 @@ export class MendeleySync {
      * Convert Mendeley document to PaperMetadata
      */
     mapFromMendeleyDocument(doc: MendeleyDocument): PaperMetadata {
-        const authors = (doc.authors || [])
-            .map(a => `${a.first_name ? a.first_name + ' ' : ''}${a.last_name}`.trim());
+        const authors = (doc.authors || []).map(a => `${a.first_name ? a.first_name + ' ' : ''}${a.last_name}`.trim());
 
         let id = doc.identifiers?.doi || doc.id;
         let type: PaperMetadata['type'] = 'doi';
@@ -472,10 +472,7 @@ export async function showFolderSelector(folders: MendeleyFolder[]): Promise<Men
     const result = await showDialog({
         title: 'Link Mendeley Folder',
         body: widget,
-        buttons: [
-            Dialog.cancelButton(),
-            Dialog.okButton({ label: 'Link Folder' })
-        ]
+        buttons: [Dialog.cancelButton(), Dialog.okButton({ label: 'Link Folder' })]
     });
 
     if (result.button.accept) {

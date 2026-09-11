@@ -1,0 +1,11 @@
+node_modules
+lib
+devscholar_jupyter/labextension
+ui-tests/node_modules
+ui-tests/test-results
+ui-tests/playwright-report
+yarn.lock
+package.json
+tsconfig.tsbuildinfo
+docs/images
+*.md

@@ -63,7 +63,7 @@ export class PaperTooltip {
      */
     private setupGlobalListeners(): void {
         // Listen for hover on elements with paper data attributes
-        document.addEventListener('mouseover', async (event) => {
+        document.addEventListener('mouseover', async event => {
             if (!this.enabled) return;
             const target = event.target as HTMLElement;
 
@@ -84,7 +84,7 @@ export class PaperTooltip {
             }
         });
 
-        document.addEventListener('mouseout', (event) => {
+        document.addEventListener('mouseout', event => {
             const target = event.target as HTMLElement;
             if (target.hasAttribute('data-paper-type')) {
                 this.scheduleHide();
@@ -199,9 +199,10 @@ export class PaperTooltip {
      * Render paper metadata
      */
     private renderMetadata(metadata: PaperMetadata): string {
-        const authors = metadata.authors.length > 3
-            ? `${metadata.authors.slice(0, 3).join(', ')} et al.`
-            : metadata.authors.join(', ');
+        const authors =
+            metadata.authors.length > 3
+                ? `${metadata.authors.slice(0, 3).join(', ')} et al.`
+                : metadata.authors.join(', ');
 
         const abstract = metadata.abstract
             ? metadata.abstract.length > 400
@@ -218,42 +219,66 @@ export class PaperTooltip {
                     ${this.escapeHtml(authors)}
                     ${metadata.year ? ` (${metadata.year})` : ''}
                 </div>
-                ${metadata.venue ? `
+                ${
+                    metadata.venue
+                        ? `
                     <div style="font-style: italic; color: var(--jp-ui-font-color2); margin-bottom: 8px;">
                         ${this.escapeHtml(metadata.venue)}
                     </div>
-                ` : ''}
-                ${metadata.citationCount !== undefined ? `
+                `
+                        : ''
+                }
+                ${
+                    metadata.citationCount !== undefined
+                        ? `
                     <div style="color: var(--jp-ui-font-color2); margin-bottom: 8px;">
                         📚 ${metadata.citationCount.toLocaleString()} citations
                     </div>
-                ` : ''}
-                ${abstract ? `
+                `
+                        : ''
+                }
+                ${
+                    abstract
+                        ? `
                     <div style="font-size: 12px; color: var(--jp-ui-font-color2);
                                 margin-bottom: 12px; line-height: 1.6;">
                         ${this.escapeHtml(abstract)}
                     </div>
-                ` : ''}
+                `
+                        : ''
+                }
                 <div style="display: flex; gap: 12px; flex-wrap: wrap;">
-                    ${metadata.url ? `
+                    ${
+                        metadata.url
+                            ? `
                         <a href="${metadata.url}" target="_blank"
                            style="color: var(--jp-brand-color1); text-decoration: none; font-size: 12px;">
                             📄 Open Paper
                         </a>
-                    ` : ''}
-                    ${metadata.pdfUrl ? `
+                    `
+                            : ''
+                    }
+                    ${
+                        metadata.pdfUrl
+                            ? `
                         <a href="${metadata.pdfUrl}" target="_blank"
                            style="color: var(--jp-brand-color1); text-decoration: none; font-size: 12px;">
                             📥 PDF (Browser)
                         </a>
-                    ` : ''}
-                    ${metadata.pdfUrl ? `
+                    `
+                            : ''
+                    }
+                    ${
+                        metadata.pdfUrl
+                            ? `
                         <button onclick="window.dispatchEvent(new CustomEvent('devscholar:preview-pdf', {detail: {paperId: '${metadata.id}', paperType: '${metadata.type}'}}))"
                                 style="background: none; border: none; color: var(--jp-brand-color1);
                                        cursor: pointer; font-size: 12px; padding: 0;">
                             👁️ Preview PDF
                         </button>
-                    ` : ''}
+                    `
+                            : ''
+                    }
                     <button onclick="navigator.clipboard.writeText('${metadata.type}:${metadata.id}')"
                             style="background: none; border: none; color: var(--jp-brand-color1);
                                    cursor: pointer; font-size: 12px; padding: 0;">

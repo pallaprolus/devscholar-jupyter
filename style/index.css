@@ -82,23 +82,23 @@ body.devscholar-hide-count .devscholar-has-papers::after {
 }
 
 /* Paper type badges */
-.devscholar-paper-reference[data-paper-type="arxiv"] {
+.devscholar-paper-reference[data-paper-type='arxiv'] {
     border-bottom-color: #b31b1b;
 }
 
-.devscholar-paper-reference[data-paper-type="doi"] {
+.devscholar-paper-reference[data-paper-type='doi'] {
     border-bottom-color: #fcb426;
 }
 
-.devscholar-paper-reference[data-paper-type="ieee"] {
+.devscholar-paper-reference[data-paper-type='ieee'] {
     border-bottom-color: #00629b;
 }
 
-.devscholar-paper-reference[data-paper-type="semantic_scholar"] {
+.devscholar-paper-reference[data-paper-type='semantic_scholar'] {
     border-bottom-color: #1857b6;
 }
 
-.devscholar-paper-reference[data-paper-type="openalex"] {
+.devscholar-paper-reference[data-paper-type='openalex'] {
     border-bottom-color: #a50f15;
 }
 
@@ -112,7 +112,7 @@ body.devscholar-hide-count .devscholar-has-papers::after {
 }
 
 /* Dark mode adjustments */
-[data-jp-theme-light="false"] .devscholar-tooltip {
+[data-jp-theme-light='false'] .devscholar-tooltip {
     background: var(--jp-layout-color1);
     border-color: var(--jp-border-color2);
 }
@@ -182,7 +182,9 @@ body.devscholar-hide-count .devscholar-has-papers::after {
 }
 
 @keyframes devscholar-spin {
-    to { transform: rotate(360deg); }
+    to {
+        transform: rotate(360deg);
+    }
 }
 
 .devscholar-search-results {

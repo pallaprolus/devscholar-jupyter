@@ -128,11 +128,15 @@ export class PdfPreviewWidget extends Widget {
                 <div class="devscholar-pdf-error-icon">!</div>
                 <h3>Error Loading PDF</h3>
                 <p>${this.escapeHtml(message)}</p>
-                ${this.paper.url ? `
+                ${
+                    this.paper.url
+                        ? `
                     <a href="${this.paper.url}" target="_blank" class="devscholar-pdf-error-link">
                         Open paper in browser
                     </a>
-                ` : ''}
+                `
+                        : ''
+                }
             </div>
         `;
     }

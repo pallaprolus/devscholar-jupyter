@@ -22,6 +22,33 @@ export interface PaperMetadata {
 export class MetadataClient {
     private cache: Map<string, PaperMetadata> = new Map();
     private pendingRequests: Map<string, Promise<PaperMetadata | null>> = new Map();
+    private semanticScholarApiKey = '';
+    private s2Queue: Promise<unknown> = Promise.resolve();
+    private s2KeyRejected = false;
+    private s2ConsecutiveFailures = 0;
+
+    /**
+     * Set (or clear) the Semantic Scholar API key used to enrich arXiv records.
+     * Cached arXiv records are dropped so they are re-fetched with the key.
+     */
+    setSemanticScholarApiKey(key: string): void {
+        const next = (key || '').trim();
+        if (next === this.semanticScholarApiKey) {
+            return;
+        }
+        this.semanticScholarApiKey = next;
+        this.s2KeyRejected = false;
+        this.s2ConsecutiveFailures = 0;
+        for (const cacheKey of Array.from(this.cache.keys())) {
+            if (cacheKey.startsWith('arxiv:')) {
+                this.cache.delete(cacheKey);
+            }
+        }
+    }
+
+    get hasSemanticScholarApiKey(): boolean {
+        return this.semanticScholarApiKey.length > 0;
+    }
 
     /**
      * Fetch metadata for a paper reference
@@ -61,7 +88,7 @@ export class MetadataClient {
         const results = new Map<string, PaperMetadata>();
 
         await Promise.all(
-            papers.map(async (paper) => {
+            papers.map(async paper => {
                 const metadata = await this.fetchMetadata(paper);
                 if (metadata) {
                     results.set(`${paper.type}:${paper.id}`, metadata);
@@ -95,10 +122,12 @@ export class MetadataClient {
      * The arXiv API (export.arxiv.org) does not send CORS headers, so it
      * cannot be called from the browser. Every arXiv paper has a DataCite DOI
      * (10.48550/arXiv.<id>) and the DataCite API allows cross-origin
-     * requests, so it is used instead. DataCite has no citation counts, so
-     * arXiv records carry title, authors, year and abstract only. If the
-     * lookup fails a minimal record is returned so links and the PDF preview
-     * keep working.
+     * requests, so it is used instead. DataCite has no citation counts; when
+     * the user has configured a Semantic Scholar API key the record is
+     * enriched with citation count and venue from Semantic Scholar (anonymous
+     * requests are rate-limited too aggressively to be usable). If the lookup
+     * fails a minimal record is returned so links and the PDF preview keep
+     * working.
      */
     private async fetchArxiv(id: string): Promise<PaperMetadata | null> {
         const basic: PaperMetadata = {
@@ -128,9 +157,9 @@ export class MetadataClient {
                     const parts = name.split(',').map((p: string) => p.trim());
                     return parts.length === 2 ? `${parts[1]} ${parts[0]}` : name;
                 });
-                const abstract = (attrs.descriptions ?? []).find(
-                    (d: any) => d.descriptionType === 'Abstract'
-                )?.description ?? attrs.descriptions?.[0]?.description;
+                const abstract =
+                    (attrs.descriptions ?? []).find((d: any) => d.descriptionType === 'Abstract')?.description ??
+                    attrs.descriptions?.[0]?.description;
                 result = {
                     ...basic,
                     title: attrs.titles?.[0]?.title || basic.title,
@@ -146,7 +175,90 @@ export class MetadataClient {
             console.warn('DevScholar: failed to fetch arXiv metadata from DataCite:', error);
         }
 
+        if (this.hasSemanticScholarApiKey) {
+            const s2 = await this.fetchSemanticScholarWithKey(
+                `https://api.semanticscholar.org/graph/v1/paper/arXiv:${id}?fields=title,authors,abstract,year,venue,citationCount,externalIds`
+            );
+            if (s2) {
+                result = {
+                    ...result,
+                    title: result.title === basic.title ? s2.title || result.title : result.title,
+                    authors: result.authors.length > 0 ? result.authors : s2.authors?.map((a: any) => a.name) || [],
+                    abstract: result.abstract || s2.abstract || undefined,
+                    year: result.year || s2.year || undefined,
+                    venue: s2.venue || undefined,
+                    citationCount: s2.citationCount,
+                    doi: s2.externalIds?.DOI || result.doi
+                };
+            }
+        }
+
         return result;
+    }
+
+    /**
+     * Fetch a Semantic Scholar URL with the configured API key, one request
+     * at a time (the key allows 1 request per second). Returns the parsed
+     * JSON, or null on any failure.
+     *
+     * Semantic Scholar answers a bad key with a 403 that carries no CORS
+     * headers, which the browser reports as a generic network failure, so a
+     * rejected key cannot be told apart from an outage. After two consecutive
+     * failures the key is treated as rejected and no further calls are made
+     * until the key changes.
+     */
+    private fetchSemanticScholarWithKey(url: string): Promise<any | null> {
+        if (!this.hasSemanticScholarApiKey || this.s2KeyRejected) {
+            return Promise.resolve(null);
+        }
+        const run = this.s2Queue.then(async () => {
+            if (this.s2KeyRejected) {
+                return null;
+            }
+            try {
+                const response = await fetch(url, {
+                    headers: { Accept: 'application/json', 'x-api-key': this.semanticScholarApiKey }
+                });
+                if (response.status === 401 || response.status === 403) {
+                    this.rejectSemanticScholarKey();
+                    return null;
+                }
+                if (response.status === 404) {
+                    // Paper not indexed; the key itself is fine
+                    this.s2ConsecutiveFailures = 0;
+                    return null;
+                }
+                if (!response.ok) {
+                    this.noteSemanticScholarFailure();
+                    return null;
+                }
+                this.s2ConsecutiveFailures = 0;
+                return await response.json();
+            } catch {
+                this.noteSemanticScholarFailure();
+                return null;
+            } finally {
+                await new Promise(resolve => setTimeout(resolve, 1100));
+            }
+        });
+        this.s2Queue = run.catch(() => undefined);
+        return run;
+    }
+
+    private noteSemanticScholarFailure(): void {
+        this.s2ConsecutiveFailures += 1;
+        if (this.s2ConsecutiveFailures >= 2) {
+            this.rejectSemanticScholarKey();
+        }
+    }
+
+    private rejectSemanticScholarKey(): void {
+        if (this.s2KeyRejected) {
+            return;
+        }
+        this.s2KeyRejected = true;
+        console.warn('DevScholar: Semantic Scholar requests are failing; the configured API key is probably invalid');
+        window.dispatchEvent(new CustomEvent('devscholar:s2-key-rejected'));
     }
 
     /**
@@ -154,15 +266,12 @@ export class MetadataClient {
      */
     private async fetchDoi(doi: string): Promise<PaperMetadata | null> {
         try {
-            const response = await fetch(
-                `https://api.openalex.org/works/doi:${doi}`,
-                {
-                    headers: {
-                        'Accept': 'application/json',
-                        'User-Agent': 'DevScholar/1.0 (mailto:pallaprolus@gmail.com)'
-                    }
+            const response = await fetch(`https://api.openalex.org/works/doi:${doi}`, {
+                headers: {
+                    Accept: 'application/json',
+                    'User-Agent': 'DevScholar/1.0 (mailto:pallaprolus@gmail.com)'
                 }
-            );
+            });
 
             if (!response.ok) return null;
 
@@ -179,15 +288,12 @@ export class MetadataClient {
      */
     private async fetchOpenAlex(id: string): Promise<PaperMetadata | null> {
         try {
-            const response = await fetch(
-                `https://api.openalex.org/works/${id}`,
-                {
-                    headers: {
-                        'Accept': 'application/json',
-                        'User-Agent': 'DevScholar/1.0 (mailto:pallaprolus@gmail.com)'
-                    }
+            const response = await fetch(`https://api.openalex.org/works/${id}`, {
+                headers: {
+                    Accept: 'application/json',
+                    'User-Agent': 'DevScholar/1.0 (mailto:pallaprolus@gmail.com)'
                 }
-            );
+            });
 
             if (!response.ok) return null;
 
@@ -201,9 +307,7 @@ export class MetadataClient {
 
     private parseOpenAlexWork(data: any, type: PaperReference['type'], id: string): PaperMetadata | null {
         try {
-            const authors = data.authorships?.map((a: any) =>
-                a.author?.display_name || 'Unknown'
-            ) || [];
+            const authors = data.authorships?.map((a: any) => a.author?.display_name || 'Unknown') || [];
 
             return {
                 id,
@@ -248,7 +352,7 @@ export class MetadataClient {
                 `https://api.semanticscholar.org/graph/v1/paper/${id}?fields=title,authors,abstract,year,venue,citationCount,openAccessPdf,externalIds`,
                 {
                     headers: {
-                        'Accept': 'application/json'
+                        Accept: 'application/json'
                     }
                 }
             );
@@ -303,7 +407,7 @@ export class MetadataClient {
                 `https://api.openalex.org/works?search=${encodeURIComponent(query)}&per_page=${limit}`,
                 {
                     headers: {
-                        'Accept': 'application/json',
+                        Accept: 'application/json',
                         'User-Agent': 'DevScholar/1.0 (mailto:pallaprolus@gmail.com)'
                     }
                 }
@@ -312,9 +416,13 @@ export class MetadataClient {
             if (!response.ok) return [];
 
             const data = await response.json();
-            return data.results?.map((work: any) =>
-                this.parseOpenAlexWork(work, 'openalex', work.id.replace('https://openalex.org/', ''))
-            ).filter(Boolean) || [];
+            return (
+                data.results
+                    ?.map((work: any) =>
+                        this.parseOpenAlexWork(work, 'openalex', work.id.replace('https://openalex.org/', ''))
+                    )
+                    .filter(Boolean) || []
+            );
         } catch (error) {
             console.error('Failed to search papers:', error);
             return [];

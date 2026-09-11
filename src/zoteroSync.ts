@@ -6,7 +6,6 @@
 import { Dialog, showDialog, InputDialog } from '@jupyterlab/apputils';
 import { Widget } from '@lumino/widgets';
 import { PaperMetadata } from './metadataClient';
-import { PaperReference } from './paperParser';
 
 const ZOTERO_API_KEY_STORAGE = 'devscholar.zoteroApiKey';
 const ZOTERO_USER_ID_STORAGE = 'devscholar.zoteroUserId';
@@ -158,10 +157,7 @@ export class ZoteroSync {
             throw new Error('Zotero not configured');
         }
 
-        const response = await fetch(
-            `${this.baseUrl}/users/${userId}/collections`,
-            { headers }
-        );
+        const response = await fetch(`${this.baseUrl}/users/${userId}/collections`, { headers });
 
         if (response.status === 403) {
             throw new Error('Zotero: Unauthorized. Check your API Key.');
@@ -190,14 +186,11 @@ export class ZoteroSync {
             throw new Error('Zotero not configured');
         }
 
-        const response = await fetch(
-            `${this.baseUrl}/users/${userId}/collections`,
-            {
-                method: 'POST',
-                headers,
-                body: JSON.stringify([{ name }])
-            }
-        );
+        const response = await fetch(`${this.baseUrl}/users/${userId}/collections`, {
+            method: 'POST',
+            headers,
+            body: JSON.stringify([{ name }])
+        });
 
         if (!response.ok) {
             throw new Error(`Failed to create collection: ${response.statusText}`);
@@ -299,7 +292,10 @@ export class ZoteroSync {
     /**
      * Sync papers to Zotero
      */
-    async syncPapers(papers: PaperMetadata[], collectionKey?: string): Promise<{ success: number; skipped: number; failed: number }> {
+    async syncPapers(
+        papers: PaperMetadata[],
+        collectionKey?: string
+    ): Promise<{ success: number; skipped: number; failed: number }> {
         const headers = this.getAuthHeaders();
         const userId = this.getUserId();
 
@@ -333,14 +329,11 @@ export class ZoteroSync {
                 // Create new item
                 const zoteroItem = this.mapToZoteroItem(paper, collectionKey);
 
-                const response = await fetch(
-                    `${this.baseUrl}/users/${userId}/items`,
-                    {
-                        method: 'POST',
-                        headers,
-                        body: JSON.stringify([zoteroItem])
-                    }
-                );
+                const response = await fetch(`${this.baseUrl}/users/${userId}/items`, {
+                    method: 'POST',
+                    headers,
+                    body: JSON.stringify([zoteroItem])
+                });
 
                 if (response.ok) {
                     success++;
@@ -489,10 +482,7 @@ export async function showCollectionSelector(collections: ZoteroCollection[]): P
     const result = await showDialog({
         title: 'Link Zotero Collection',
         body: widget,
-        buttons: [
-            Dialog.cancelButton(),
-            Dialog.okButton({ label: 'Link Collection' })
-        ]
+        buttons: [Dialog.cancelButton(), Dialog.okButton({ label: 'Link Collection' })]
     });
 
     if (result.button.accept) {

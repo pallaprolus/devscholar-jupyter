@@ -4,13 +4,7 @@
  * markdown cells in edit mode) so they are underlined and hoverable.
  */
 
-import {
-    Decoration,
-    DecorationSet,
-    EditorView,
-    ViewPlugin,
-    ViewUpdate
-} from '@codemirror/view';
+import { Decoration, DecorationSet, EditorView, ViewPlugin, ViewUpdate } from '@codemirror/view';
 import { Extension, RangeSetBuilder } from '@codemirror/state';
 
 import { paperParser, PaperReference } from './paperParser';

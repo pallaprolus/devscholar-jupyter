@@ -11,7 +11,7 @@ export interface PaperReference {
     columnNumber: number;
     rawText: string;
     context?: string;
-    version?: string;  // For arXiv versioned papers like 2301.12345v2
+    version?: string; // For arXiv versioned papers like 2301.12345v2
 }
 
 interface PatternConfig {
@@ -110,16 +110,16 @@ export class PaperParser {
 
     // Comment patterns for different languages (for code cells)
     private commentPatterns = [
-        /^\s*\/\//,           // JavaScript, TypeScript, C, C++, Java, Go, Rust
-        /^\s*#/,              // Python, Ruby, Shell, YAML
-        /^\s*\/\*/,           // Multi-line comment start
-        /^\s*\*/,             // Multi-line comment continuation
-        /^\s*--/,             // SQL, Haskell, Lua
-        /^\s*;/,              // Assembly, Lisp, INI
-        /^\s*%/,              // LaTeX, MATLAB
-        /^\s*<!--/,           // HTML, XML
-        /^\s*"""/,            // Python docstring
-        /^\s*'''/,            // Python docstring
+        /^\s*\/\//, // JavaScript, TypeScript, C, C++, Java, Go, Rust
+        /^\s*#/, // Python, Ruby, Shell, YAML
+        /^\s*\/\*/, // Multi-line comment start
+        /^\s*\*/, // Multi-line comment continuation
+        /^\s*--/, // SQL, Haskell, Lua
+        /^\s*;/, // Assembly, Lisp, INI
+        /^\s*%/, // LaTeX, MATLAB
+        /^\s*<!--/, // HTML, XML
+        /^\s*"""/, // Python docstring
+        /^\s*'''/ // Python docstring
     ];
 
     /**

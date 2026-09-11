@@ -157,3 +157,13 @@ jobs:
       - name: Publish to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
         # No token needed - uses OIDC trusted publishing!
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ needs.check-version.outputs.version }}
+        run: |
+          gh release create "v$VERSION" dist/* \
+            --title "v$VERSION" \
+            --generate-notes \
+            --verify-tag

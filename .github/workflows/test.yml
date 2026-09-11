@@ -39,7 +39,6 @@ jobs:
 
       - name: Lint
         run: jlpm lint:check
-        continue-on-error: true
 
       - name: Build labextension
         run: jupyter labextension build .

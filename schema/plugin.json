@@ -66,6 +66,12 @@
             "default": 7,
             "minimum": 1,
             "maximum": 30
+        },
+        "semanticScholarApiKey": {
+            "type": "string",
+            "title": "Semantic Scholar API Key",
+            "description": "Optional. With a free key from https://www.semanticscholar.org/product/api arXiv references also show citation counts and venue. Without a key Semantic Scholar rate-limits browser requests, so it is not used.",
+            "default": ""
         }
     }
 }

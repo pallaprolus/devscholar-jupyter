@@ -61,7 +61,7 @@ class SearchCiteWidget extends Widget {
 
         // Setup event listeners
         this.inputElement.addEventListener('input', () => this.onInputChange());
-        this.inputElement.addEventListener('keydown', (e) => this.onKeyDown(e));
+        this.inputElement.addEventListener('keydown', e => this.onKeyDown(e));
 
         // Focus input on show
         setTimeout(() => this.inputElement.focus(), 100);
@@ -103,9 +103,7 @@ class SearchCiteWidget extends Widget {
      */
     private onKeyDown(e: KeyboardEvent): void {
         const items = this.resultsElement.querySelectorAll('.devscholar-search-result-item');
-        const selectedIndex = Array.from(items).findIndex(item =>
-            item.classList.contains('selected')
-        );
+        const selectedIndex = Array.from(items).findIndex(item => item.classList.contains('selected'));
 
         switch (e.key) {
             case 'ArrowDown':
@@ -127,7 +125,9 @@ class SearchCiteWidget extends Widget {
                     // Close dialog with selection
                     const dialog = this.node.closest('.jp-Dialog');
                     if (dialog) {
-                        const acceptButton = dialog.querySelector('.jp-Dialog-button.jp-mod-accept') as HTMLButtonElement;
+                        const acceptButton = dialog.querySelector(
+                            '.jp-Dialog-button.jp-mod-accept'
+                        ) as HTMLButtonElement;
                         acceptButton?.click();
                     }
                 }
@@ -210,24 +210,26 @@ class SearchCiteWidget extends Widget {
             return;
         }
 
-        this.resultsElement.innerHTML = results.map((result, index) => {
-            const authorsDisplay = result.authors.length > 3
-                ? `${result.authors.slice(0, 3).join(', ')} et al.`
-                : result.authors.join(', ');
+        this.resultsElement.innerHTML = results
+            .map((result, index) => {
+                const authorsDisplay =
+                    result.authors.length > 3
+                        ? `${result.authors.slice(0, 3).join(', ')} et al.`
+                        : result.authors.join(', ');
 
-            const metaParts: string[] = [];
-            if (result.year) metaParts.push(String(result.year));
-            if (result.citationCount !== undefined && result.citationCount > 0) {
-                metaParts.push(`${result.citationCount.toLocaleString()} citations`);
-            }
+                const metaParts: string[] = [];
+                if (result.year) metaParts.push(String(result.year));
+                if (result.citationCount !== undefined && result.citationCount > 0) {
+                    metaParts.push(`${result.citationCount.toLocaleString()} citations`);
+                }
 
-            const idDisplay = result.arxivId
-                ? `arXiv:${result.arxivId}`
-                : result.doi
-                    ? `DOI:${result.doi.substring(0, 30)}${result.doi.length > 30 ? '...' : ''}`
-                    : `OpenAlex:${result.id}`;
+                const idDisplay = result.arxivId
+                    ? `arXiv:${result.arxivId}`
+                    : result.doi
+                      ? `DOI:${result.doi.substring(0, 30)}${result.doi.length > 30 ? '...' : ''}`
+                      : `OpenAlex:${result.id}`;
 
-            return `
+                return `
                 <div class="devscholar-search-result-item ${index === 0 ? 'selected' : ''}"
                      data-result='${JSON.stringify(result).replace(/'/g, '&#39;')}'>
                     <div class="devscholar-result-title">${this.escapeHtml(result.title)}</div>
@@ -238,7 +240,8 @@ class SearchCiteWidget extends Widget {
                     </div>
                 </div>
             `;
-        }).join('');
+            })
+            .join('');
 
         // Select first result by default
         if (results.length > 0) {
@@ -249,9 +252,9 @@ class SearchCiteWidget extends Widget {
         this.resultsElement.querySelectorAll('.devscholar-search-result-item').forEach(item => {
             item.addEventListener('click', () => {
                 // Remove selection from all
-                this.resultsElement.querySelectorAll('.devscholar-search-result-item').forEach(i =>
-                    i.classList.remove('selected')
-                );
+                this.resultsElement
+                    .querySelectorAll('.devscholar-search-result-item')
+                    .forEach(i => i.classList.remove('selected'));
                 // Add selection to clicked
                 item.classList.add('selected');
                 const result = (item as HTMLElement).dataset.result;
@@ -294,10 +297,7 @@ export async function showSearchCiteDialog(): Promise<string | undefined> {
     const result = await showDialog({
         title: 'Search & Cite Paper',
         body: widget,
-        buttons: [
-            Dialog.cancelButton(),
-            Dialog.okButton({ label: 'Insert Citation' })
-        ]
+        buttons: [Dialog.cancelButton(), Dialog.okButton({ label: 'Insert Citation' })]
     });
 
     if (result.button.accept) {
@@ -325,11 +325,7 @@ export async function showSearchCiteDialog(): Promise<string | undefined> {
  * @param metadata Optional paper metadata for title
  * @param isCode Whether this is for a code cell (needs comment prefix)
  */
-export function formatCitationForInsertion(
-    citation: string,
-    metadata?: PaperMetadata,
-    isCode: boolean = true
-): string {
+export function formatCitationForInsertion(citation: string, metadata?: PaperMetadata, isCode: boolean = true): string {
     const prefix = isCode ? '# ' : '';
     const lines: string[] = [];
 

@@ -20,7 +20,7 @@
         ]
     },
     "title": "DevScholar",
-    "description": "DevScholar JupyterLab Extension Settings.\n\nIf DevScholar is useful to you, please star the project on GitHub: https://github.com/pallaprolus/devscholar-jupyter (Help menu > Star DevScholar on GitHub).",
+    "description": "DevScholar JupyterLab Extension Settings.\n\nIf DevScholar is useful to you, please star the project on GitHub: https://github.com/pallaprolus/devscholar-jupyter (Help menu > DevScholar on GitHub).",
     "type": "object",
     "properties": {
         "highlightPapers": {

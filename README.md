@@ -87,9 +87,6 @@ Two-way sync with Mendeley:
 - Import citations from Mendeley
 - Link workspaces to Mendeley folders
 
-### 9. Help menu
-The Help menu gains two entries: **Star DevScholar on GitHub** and **Report a DevScholar Issue**. Both are also available from the command palette and the link is repeated in the DevScholar settings page.
-
 ## Installation
 
 ### Prerequisites
@@ -163,6 +160,10 @@ Configure via Settings → Advanced Settings Editor → DevScholar:
 - [x] PDF preview panel
 - [x] Zotero/Mendeley sync
 
+
+## Feedback
+
+Bugs and ideas: https://github.com/pallaprolus/devscholar-jupyter/issues (also reachable from *Help → Report a DevScholar Issue* inside JupyterLab).
 
 ## License
 

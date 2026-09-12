@@ -744,7 +744,7 @@ async function activateExtension(
     const REPO_URL = 'https://github.com/pallaprolus/devscholar-jupyter';
     const openGithubCommandID = 'devscholar:open-github';
     app.commands.addCommand(openGithubCommandID, {
-        label: 'Star DevScholar on GitHub',
+        label: 'DevScholar on GitHub',
         caption: `Open ${REPO_URL} in a new tab`,
         execute: () => {
             window.open(REPO_URL, '_blank', 'noopener');

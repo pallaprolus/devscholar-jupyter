@@ -9,6 +9,7 @@
 import { Dialog, showDialog, InputDialog } from '@jupyterlab/apputils';
 import { Widget } from '@lumino/widgets';
 import { PaperMetadata } from './metadataClient';
+import { ExistingRecord, findMatch, planSync, SyncPlanEntry } from './dedupe';
 
 const MENDELEY_ACCESS_TOKEN_STORAGE = 'devscholar.mendeleyAccessToken';
 const MENDELEY_FOLDER_STORAGE = 'devscholar.mendeleyFolder';
@@ -283,7 +284,8 @@ export class MendeleySync {
      */
     async syncPapers(
         papers: PaperMetadata[],
-        folderId?: string
+        folderId?: string,
+        options: { force?: boolean } = {}
     ): Promise<{ success: number; skipped: number; failed: number; errors: string[] }> {
         const headers = this.getAuthHeaders(MendeleySync.DOCUMENT_TYPE, true);
         if (!headers) {
@@ -306,7 +308,7 @@ export class MendeleySync {
         for (const paper of papers) {
             try {
                 // Check for duplicate
-                const existing = this.findExistingDocument(paper, existingDocs);
+                const existing = options.force ? undefined : this.findExistingDocument(paper, existingDocs);
                 if (existing) {
                     // If folder specified and doc not in folder, add it
                     if (folderId && !existing.folder_uuids?.includes(folderId)) {
@@ -394,13 +396,36 @@ export class MendeleySync {
         };
     }
 
+    private toRecord(doc: MendeleyDocument): ExistingRecord {
+        return {
+            id: doc.id,
+            title: doc.title,
+            doi: doc.identifiers?.doi,
+            arxivId: doc.identifiers?.arxiv,
+            url: doc.websites?.[0]
+        };
+    }
+
+    /**
+     * Compare papers with the library (or one folder) without writing anything
+     */
+    async analyze(papers: PaperMetadata[], folderId?: string): Promise<SyncPlanEntry[]> {
+        const docs = folderId ? await this.fetchDocumentsFromFolder(folderId) : await this.fetchAllDocuments();
+        return planSync(
+            papers,
+            docs.map(doc => this.toRecord(doc))
+        );
+    }
+
     private findExistingDocument(paper: PaperMetadata, docs: MendeleyDocument[]): MendeleyDocument | undefined {
-        return docs.find(doc => {
-            if (paper.doi && doc.identifiers?.doi === paper.doi) return true;
-            if (paper.type === 'arxiv' && doc.identifiers?.arxiv === paper.id) return true;
-            if (doc.title.toLowerCase() === paper.title.toLowerCase()) return true;
-            return false;
-        });
+        const match = findMatch(
+            paper,
+            docs.map(doc => this.toRecord(doc))
+        );
+        if (!match || match.kind !== 'exact') {
+            return undefined;
+        }
+        return docs.find(doc => doc.id === match.record.id);
     }
 
     private mapToMendeleyDocument(paper: PaperMetadata, folderId?: string): any {

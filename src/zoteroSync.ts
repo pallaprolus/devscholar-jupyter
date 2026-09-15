@@ -6,6 +6,7 @@
 import { Dialog, showDialog, InputDialog } from '@jupyterlab/apputils';
 import { Widget } from '@lumino/widgets';
 import { PaperMetadata } from './metadataClient';
+import { ExistingRecord, findMatch, planSync, SyncPlanEntry } from './dedupe';
 
 const ZOTERO_API_KEY_STORAGE = 'devscholar.zoteroApiKey';
 const ZOTERO_USER_ID_STORAGE = 'devscholar.zoteroUserId';
@@ -294,7 +295,8 @@ export class ZoteroSync {
      */
     async syncPapers(
         papers: PaperMetadata[],
-        collectionKey?: string
+        collectionKey?: string,
+        options: { force?: boolean } = {}
     ): Promise<{ success: number; skipped: number; failed: number; errors: string[] }> {
         const headers = this.getAuthHeaders();
         const userId = this.getUserId();
@@ -321,7 +323,7 @@ export class ZoteroSync {
         for (const paper of papers) {
             try {
                 // Check for duplicate
-                const existing = this.findExistingItem(paper, existingItems);
+                const existing = options.force ? undefined : this.findExistingItem(paper, existingItems);
                 if (existing) {
                     skipped++;
                     continue;
@@ -394,14 +396,40 @@ export class ZoteroSync {
         };
     }
 
+    private toRecord(item: ZoteroItem): ExistingRecord {
+        const extra = item.data.extra || '';
+        const devId = extra.match(/DevScholar-ID:\s*(\S+)/)?.[1];
+        const arxivId = extra.match(/arXiv:\s*(\S+)/i)?.[1];
+        return {
+            id: item.key,
+            title: item.data.title,
+            doi: item.data.DOI,
+            url: item.data.url,
+            arxivId,
+            devscholarId: devId
+        };
+    }
+
+    /**
+     * Compare papers with the library (or one collection) without writing anything
+     */
+    async analyze(papers: PaperMetadata[], collectionKey?: string): Promise<SyncPlanEntry[]> {
+        const items = collectionKey ? await this.fetchItemsFromCollection(collectionKey) : await this.fetchAllItems();
+        return planSync(
+            papers,
+            items.map(item => this.toRecord(item))
+        );
+    }
+
     private findExistingItem(paper: PaperMetadata, items: ZoteroItem[]): ZoteroItem | undefined {
-        return items.find(item => {
-            const devIdMatch = item.data.extra?.match(/DevScholar-ID:\s*(\S+)/);
-            if (devIdMatch && devIdMatch[1] === paper.id) return true;
-            if (paper.doi && item.data.DOI === paper.doi) return true;
-            if (paper.type === 'arxiv' && item.data.url?.includes(paper.id)) return true;
-            return false;
-        });
+        const match = findMatch(
+            paper,
+            items.map(item => this.toRecord(item))
+        );
+        if (!match || match.kind !== 'exact') {
+            return undefined;
+        }
+        return items.find(item => item.key === match.record.id);
     }
 
     private mapToZoteroItem(paper: PaperMetadata, collectionKey?: string): any {

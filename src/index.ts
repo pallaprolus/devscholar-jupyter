@@ -23,6 +23,7 @@ import { MainAreaWidget, showErrorMessage } from '@jupyterlab/apputils';
 import { Widget } from '@lumino/widgets';
 import { zoteroSync, showCollectionSelector } from './zoteroSync';
 import { mendeleySync, showFolderSelector } from './mendeleySync';
+import { showSyncPreview } from './syncPreviewDialog';
 
 /**
  * DevScholar extension ID
@@ -554,7 +555,28 @@ async function activateExtension(
 
             try {
                 const collectionKey = zoteroSync.getLinkedCollection() || undefined;
-                const result = await zoteroSync.syncPapers(papersWithMetadata, collectionKey);
+                // Show what would be written and let the user choose
+                const plan = await zoteroSync.analyze(papersWithMetadata, collectionKey);
+                const chosen = await showSyncPreview('Zotero', plan);
+                if (chosen === null) {
+                    return;
+                }
+                const alreadyThere = plan.filter(e => e.status === 'exists').map(e => e.paper);
+                if (chosen.length === 0 && !(collectionKey && alreadyThere.length > 0)) {
+                    Notification.info('DevScholar: nothing selected, Zotero library unchanged', { autoClose: 3000 });
+                    return;
+                }
+                const added = await zoteroSync.syncPapers(chosen, collectionKey, { force: true });
+                // Existing items only need linking into the chosen collection/folder, if any
+                const linked = collectionKey
+                    ? await zoteroSync.syncPapers(alreadyThere, collectionKey)
+                    : { success: 0, skipped: alreadyThere.length, failed: 0, errors: [] };
+                const result = {
+                    success: added.success + linked.success,
+                    skipped: added.skipped + linked.skipped,
+                    failed: added.failed + linked.failed,
+                    errors: [...added.errors, ...linked.errors]
+                };
                 const summary = `DevScholar: Zotero sync finished. ${result.success} added, ${result.skipped} already present, ${result.failed} failed.`;
                 if (result.failed > 0) {
                     const detail = result.errors?.[0] ? ` First error: ${result.errors[0]}` : '';
@@ -715,7 +737,28 @@ async function activateExtension(
 
             try {
                 const folderId = mendeleySync.getLinkedFolder() || undefined;
-                const result = await mendeleySync.syncPapers(papersWithMetadata, folderId);
+                // Show what would be written and let the user choose
+                const plan = await mendeleySync.analyze(papersWithMetadata, folderId);
+                const chosen = await showSyncPreview('Mendeley', plan);
+                if (chosen === null) {
+                    return;
+                }
+                const alreadyThere = plan.filter(e => e.status === 'exists').map(e => e.paper);
+                if (chosen.length === 0 && !(folderId && alreadyThere.length > 0)) {
+                    Notification.info('DevScholar: nothing selected, Mendeley library unchanged', { autoClose: 3000 });
+                    return;
+                }
+                const added = await mendeleySync.syncPapers(chosen, folderId, { force: true });
+                // Existing items only need linking into the chosen collection/folder, if any
+                const linked = folderId
+                    ? await mendeleySync.syncPapers(alreadyThere, folderId)
+                    : { success: 0, skipped: alreadyThere.length, failed: 0, errors: [] };
+                const result = {
+                    success: added.success + linked.success,
+                    skipped: added.skipped + linked.skipped,
+                    failed: added.failed + linked.failed,
+                    errors: [...added.errors, ...linked.errors]
+                };
                 const summary = `DevScholar: Mendeley sync finished. ${result.success} added, ${result.skipped} already present, ${result.failed} failed.`;
                 if (result.failed > 0) {
                     const detail = result.errors?.[0] ? ` First error: ${result.errors[0]}` : '';

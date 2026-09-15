@@ -67,6 +67,68 @@ body.devscholar-hide-count .devscholar-has-papers::after {
     resize: vertical;
 }
 
+/* Sync preview dialog */
+.devscholar-sync-preview {
+    min-width: 520px;
+    max-width: 700px;
+}
+
+.devscholar-sync-preview-intro {
+    margin: 0 0 8px;
+    color: var(--jp-ui-font-color2);
+}
+
+.devscholar-sync-preview-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    max-height: 55vh;
+    overflow-y: auto;
+    border: 1px solid var(--jp-border-color1);
+    border-radius: 4px;
+}
+
+.devscholar-sync-preview-item label {
+    display: flex;
+    gap: 10px;
+    align-items: flex-start;
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--jp-border-color2);
+    cursor: pointer;
+}
+
+.devscholar-sync-preview-item:last-child label {
+    border-bottom: none;
+}
+
+.devscholar-sync-preview-item input {
+    margin-top: 3px;
+}
+
+.devscholar-sync-exists label {
+    opacity: 0.6;
+    cursor: default;
+}
+
+.devscholar-sync-preview-title {
+    font-weight: 600;
+}
+
+.devscholar-sync-preview-meta {
+    font-size: 12px;
+    color: var(--jp-ui-font-color2);
+}
+
+.devscholar-sync-preview-note {
+    font-size: 12px;
+    color: var(--jp-warn-color1);
+    margin-top: 2px;
+}
+
+.devscholar-sync-exists .devscholar-sync-preview-note {
+    color: var(--jp-ui-font-color3);
+}
+
 /* Paper reference highlight */
 .devscholar-paper-reference {
     background-color: rgba(var(--jp-brand-color1-rgb), 0.15);

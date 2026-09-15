@@ -96,3 +96,4 @@ ui-tests/playwright-report/
 ui-tests/devscholar-highlight-test.ipynb
 .eslintcache
 .stylelintcache
+devscholar_mendeley_test.ipynb

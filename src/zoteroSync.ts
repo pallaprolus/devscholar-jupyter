@@ -295,7 +295,7 @@ export class ZoteroSync {
     async syncPapers(
         papers: PaperMetadata[],
         collectionKey?: string
-    ): Promise<{ success: number; skipped: number; failed: number }> {
+    ): Promise<{ success: number; skipped: number; failed: number; errors: string[] }> {
         const headers = this.getAuthHeaders();
         const userId = this.getUserId();
 
@@ -306,6 +306,7 @@ export class ZoteroSync {
         let success = 0;
         let skipped = 0;
         let failed = 0;
+        const errors: string[] = [];
 
         // Fetch existing items for duplicate check
         let existingItems: ZoteroItem[] = [];
@@ -339,6 +340,8 @@ export class ZoteroSync {
                     success++;
                 } else {
                     failed++;
+
+                    errors.push(`${paper.title}: HTTP ${response.status} ${response.statusText}`);
                 }
 
                 // Rate limiting
@@ -346,10 +349,11 @@ export class ZoteroSync {
             } catch (error) {
                 console.error(`Failed to sync paper ${paper.title}:`, error);
                 failed++;
+                errors.push(`${paper.title}: ${(error as any)?.message ?? error}`);
             }
         }
 
-        return { success, skipped, failed };
+        return { success, skipped, failed, errors };
     }
 
     /**

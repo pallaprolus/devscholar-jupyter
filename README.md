@@ -87,6 +87,10 @@ Two-way sync with Mendeley:
 - Import citations from Mendeley
 - Link workspaces to Mendeley folders
 
+Mendeley has no browser login flow, so you paste an OAuth access token via
+*Set Mendeley Access Token*. Tokens expire after about an hour; run the
+command again when sync starts reporting authorization errors.
+
 ## Installation
 
 ### Prerequisites

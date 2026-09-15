@@ -314,7 +314,7 @@ async function activateExtension(
         execute: async () => {
             const current = notebookTracker.currentWidget;
             if (!current) {
-                console.log('No active notebook');
+                Notification.warning('DevScholar: open a notebook first', { autoClose: 3000 });
                 return;
             }
 
@@ -380,7 +380,7 @@ async function activateExtension(
 
             for (const paper of allPapers) {
                 const metadata = await metadataClient.fetchMetadata(paper);
-                if (metadata) {
+                if (metadata && !metadata.placeholder) {
                     bibtexEntries.push(generateBibtex(metadata));
                 }
             }
@@ -421,7 +421,7 @@ async function activateExtension(
                 // Try to get from active notebook's first paper
                 const current = notebookTracker.currentWidget;
                 if (!current) {
-                    console.log('No active notebook');
+                    Notification.warning('DevScholar: open a notebook first', { autoClose: 3000 });
                     return;
                 }
 
@@ -502,7 +502,7 @@ async function activateExtension(
             if (keySet) {
                 const userIdSet = await zoteroSync.promptForUserId();
                 if (userIdSet) {
-                    console.log('Zotero configured successfully');
+                    Notification.success('DevScholar: Zotero connected', { autoClose: 3000 });
                 }
             }
         }
@@ -522,13 +522,13 @@ async function activateExtension(
 
             const current = notebookTracker.currentWidget;
             if (!current) {
-                console.log('No active notebook');
+                Notification.warning('DevScholar: open a notebook first', { autoClose: 3000 });
                 return;
             }
 
             const cellPapers = notebookPapers.get(current);
             if (!cellPapers || cellPapers.size === 0) {
-                console.log('No paper references to sync');
+                Notification.info('DevScholar: no paper references in this notebook', { autoClose: 3000 });
                 return;
             }
 
@@ -539,21 +539,29 @@ async function activateExtension(
             for (const paper of allPapers) {
                 const metadata = await metadataClient.fetchMetadata(paper);
                 if (metadata) {
-                    papersWithMetadata.push(metadata);
+                    if (!metadata.placeholder) {
+                        papersWithMetadata.push(metadata);
+                    }
                 }
             }
 
             if (papersWithMetadata.length === 0) {
-                console.log('No papers with metadata to sync');
+                Notification.info('DevScholar: could not fetch metadata for any reference, nothing to sync', {
+                    autoClose: 4000
+                });
                 return;
             }
 
             try {
                 const collectionKey = zoteroSync.getLinkedCollection() || undefined;
                 const result = await zoteroSync.syncPapers(papersWithMetadata, collectionKey);
-                console.log(
-                    `Zotero sync: ${result.success} synced, ${result.skipped} skipped, ${result.failed} failed`
-                );
+                const summary = `DevScholar: Zotero sync finished. ${result.success} added, ${result.skipped} already present, ${result.failed} failed.`;
+                if (result.failed > 0) {
+                    const detail = result.errors?.[0] ? ` First error: ${result.errors[0]}` : '';
+                    Notification.warning(summary + detail, { autoClose: 10000 });
+                } else {
+                    Notification.success(summary, { autoClose: 5000 });
+                }
             } catch (error: any) {
                 showErrorMessage('Zotero Sync Error', error.message);
             }
@@ -574,7 +582,9 @@ async function activateExtension(
                 const selected = await showCollectionSelector(collections);
                 if (selected) {
                     zoteroSync.setLinkedCollection(selected.key);
-                    console.log(`Linked to Zotero collection: ${selected.name}`);
+                    Notification.success(`DevScholar: linked to Zotero collection "${selected.name}"`, {
+                        autoClose: 3000
+                    });
                 }
             } catch (error: any) {
                 showErrorMessage('Zotero Error', error.message);
@@ -593,7 +603,7 @@ async function activateExtension(
 
             const current = notebookTracker.currentWidget;
             if (!current) {
-                console.log('No active notebook');
+                Notification.warning('DevScholar: open a notebook first', { autoClose: 3000 });
                 return;
             }
 
@@ -604,7 +614,7 @@ async function activateExtension(
                     : await zoteroSync.fetchAllItems();
 
                 if (items.length === 0) {
-                    console.log('No items found in Zotero');
+                    Notification.info('DevScholar: no items found in Zotero', { autoClose: 3000 });
                     return;
                 }
 
@@ -631,6 +641,25 @@ async function activateExtension(
 
     // ==================== Mendeley Commands ====================
 
+    /**
+     * Verify the stored Mendeley token before a command uses it. Tokens expire
+     * after about an hour, so a clear message beats a list of HTTP 401 failures.
+     */
+    async function ensureMendeleyReady(): Promise<boolean> {
+        if (!mendeleySync.isConfigured()) {
+            showErrorMessage('Mendeley Not Configured', 'Please set your Mendeley access token first.');
+            return false;
+        }
+        if (!(await mendeleySync.testConnection())) {
+            Notification.error(
+                'DevScholar: Mendeley rejected the access token (it expires after about an hour). Run "Set Mendeley Access Token" and try again.',
+                { autoClose: 8000 }
+            );
+            return false;
+        }
+        return true;
+    }
+
     const setMendeleyTokenCommandID = 'devscholar:set-mendeley-token';
     app.commands.addCommand(setMendeleyTokenCommandID, {
         label: 'Set Mendeley Access Token',
@@ -638,7 +667,7 @@ async function activateExtension(
             await mendeleySync.promptForAccessToken();
             const isValid = await mendeleySync.testConnection();
             if (isValid) {
-                console.log('Mendeley connected successfully');
+                Notification.success('DevScholar: Mendeley connected', { autoClose: 3000 });
             } else {
                 showErrorMessage('Mendeley Error', 'Could not connect with the provided token.');
             }
@@ -649,20 +678,19 @@ async function activateExtension(
     app.commands.addCommand(syncMendeleyCommandID, {
         label: 'Sync Papers to Mendeley',
         execute: async () => {
-            if (!mendeleySync.isConfigured()) {
-                showErrorMessage('Mendeley Not Configured', 'Please set your Mendeley access token first.');
+            if (!(await ensureMendeleyReady())) {
                 return;
             }
 
             const current = notebookTracker.currentWidget;
             if (!current) {
-                console.log('No active notebook');
+                Notification.warning('DevScholar: open a notebook first', { autoClose: 3000 });
                 return;
             }
 
             const cellPapers = notebookPapers.get(current);
             if (!cellPapers || cellPapers.size === 0) {
-                console.log('No paper references to sync');
+                Notification.info('DevScholar: no paper references in this notebook', { autoClose: 3000 });
                 return;
             }
 
@@ -672,21 +700,29 @@ async function activateExtension(
             for (const paper of allPapers) {
                 const metadata = await metadataClient.fetchMetadata(paper);
                 if (metadata) {
-                    papersWithMetadata.push(metadata);
+                    if (!metadata.placeholder) {
+                        papersWithMetadata.push(metadata);
+                    }
                 }
             }
 
             if (papersWithMetadata.length === 0) {
-                console.log('No papers with metadata to sync');
+                Notification.info('DevScholar: could not fetch metadata for any reference, nothing to sync', {
+                    autoClose: 4000
+                });
                 return;
             }
 
             try {
                 const folderId = mendeleySync.getLinkedFolder() || undefined;
                 const result = await mendeleySync.syncPapers(papersWithMetadata, folderId);
-                console.log(
-                    `Mendeley sync: ${result.success} synced, ${result.skipped} skipped, ${result.failed} failed`
-                );
+                const summary = `DevScholar: Mendeley sync finished. ${result.success} added, ${result.skipped} already present, ${result.failed} failed.`;
+                if (result.failed > 0) {
+                    const detail = result.errors?.[0] ? ` First error: ${result.errors[0]}` : '';
+                    Notification.warning(summary + detail, { autoClose: 10000 });
+                } else {
+                    Notification.success(summary, { autoClose: 5000 });
+                }
             } catch (error: any) {
                 showErrorMessage('Mendeley Sync Error', error.message);
             }
@@ -697,8 +733,7 @@ async function activateExtension(
     app.commands.addCommand(linkMendeleyFolderCommandID, {
         label: 'Link Mendeley Folder',
         execute: async () => {
-            if (!mendeleySync.isConfigured()) {
-                showErrorMessage('Mendeley Not Configured', 'Please set your Mendeley access token first.');
+            if (!(await ensureMendeleyReady())) {
                 return;
             }
 
@@ -707,7 +742,9 @@ async function activateExtension(
                 const selected = await showFolderSelector(folders);
                 if (selected) {
                     mendeleySync.setLinkedFolder(selected.id);
-                    console.log(`Linked to Mendeley folder: ${selected.name}`);
+                    Notification.success(`DevScholar: linked to Mendeley folder "${selected.name}"`, {
+                        autoClose: 3000
+                    });
                 }
             } catch (error: any) {
                 showErrorMessage('Mendeley Error', error.message);
@@ -719,14 +756,13 @@ async function activateExtension(
     app.commands.addCommand(importFromMendeleyCommandID, {
         label: 'Import Papers from Mendeley',
         execute: async () => {
-            if (!mendeleySync.isConfigured()) {
-                showErrorMessage('Mendeley Not Configured', 'Please set your Mendeley access token first.');
+            if (!(await ensureMendeleyReady())) {
                 return;
             }
 
             const current = notebookTracker.currentWidget;
             if (!current) {
-                console.log('No active notebook');
+                Notification.warning('DevScholar: open a notebook first', { autoClose: 3000 });
                 return;
             }
 
@@ -737,7 +773,7 @@ async function activateExtension(
                     : await mendeleySync.fetchAllDocuments();
 
                 if (docs.length === 0) {
-                    console.log('No documents found in Mendeley');
+                    Notification.info('DevScholar: no documents found in Mendeley', { autoClose: 3000 });
                     return;
                 }
 

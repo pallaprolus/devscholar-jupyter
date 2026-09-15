@@ -17,6 +17,8 @@ export interface PaperMetadata {
     pdfUrl?: string;
     url?: string;
     doi?: string;
+    /** True when no real metadata could be fetched and the record only carries links */
+    placeholder?: boolean;
 }
 
 export class MetadataClient {
@@ -135,6 +137,7 @@ export class MetadataClient {
             type: 'arxiv',
             title: `arXiv:${id}`,
             authors: [],
+            placeholder: true,
             pdfUrl: `https://arxiv.org/pdf/${id}`,
             url: `https://arxiv.org/abs/${id}`
         };
@@ -162,6 +165,7 @@ export class MetadataClient {
                     attrs.descriptions?.[0]?.description;
                 result = {
                     ...basic,
+                    placeholder: false,
                     title: attrs.titles?.[0]?.title || basic.title,
                     authors,
                     abstract: abstract || undefined,
@@ -394,6 +398,7 @@ export class MetadataClient {
             type: 'ieee',
             title: `IEEE Xplore document ${id}`,
             authors: [],
+            placeholder: true,
             url: `https://ieeexplore.ieee.org/document/${id}`
         };
     }

@@ -46,6 +46,11 @@ export interface MendeleyDocument {
 export class MendeleySync {
     private baseUrl = 'https://api.mendeley.com';
 
+    // The Mendeley API uses versioned media types; writes are rejected without them
+    private static readonly DOCUMENT_TYPE = 'application/vnd.mendeley-document.1+json';
+    private static readonly FOLDER_TYPE = 'application/vnd.mendeley-folder.1+json';
+    private static readonly PROFILE_TYPE = 'application/vnd.mendeley-profiles.1+json';
+
     // ==================== Configuration ====================
 
     /**
@@ -113,20 +118,21 @@ export class MendeleySync {
 
     // ==================== API Methods ====================
 
-    private getAuthHeaders(): Record<string, string> | null {
+    private getAuthHeaders(mediaType: string, write = false): Record<string, string> | null {
         const token = this.getAccessToken();
         if (!token) return null;
-        return {
-            Authorization: `Bearer ${token}`,
-            'Content-Type': 'application/json'
-        };
+        const headers: Record<string, string> = { Authorization: `Bearer ${token}`, Accept: mediaType };
+        if (write) {
+            headers['Content-Type'] = mediaType;
+        }
+        return headers;
     }
 
     /**
      * Test if the current token is valid
      */
     async testConnection(): Promise<boolean> {
-        const headers = this.getAuthHeaders();
+        const headers = this.getAuthHeaders(MendeleySync.PROFILE_TYPE);
         if (!headers) return false;
 
         try {
@@ -141,7 +147,7 @@ export class MendeleySync {
      * Fetch all folders from user's Mendeley library
      */
     async fetchFolders(): Promise<MendeleyFolder[]> {
-        const headers = this.getAuthHeaders();
+        const headers = this.getAuthHeaders(MendeleySync.FOLDER_TYPE);
         if (!headers) {
             throw new Error('Mendeley not configured');
         }
@@ -163,7 +169,7 @@ export class MendeleySync {
      * Create a new folder in Mendeley
      */
     async createFolder(name: string): Promise<MendeleyFolder> {
-        const headers = this.getAuthHeaders();
+        const headers = this.getAuthHeaders(MendeleySync.FOLDER_TYPE, true);
         if (!headers) {
             throw new Error('Mendeley not configured');
         }
@@ -185,14 +191,16 @@ export class MendeleySync {
      * Fetch documents from a specific folder
      */
     async fetchDocumentsFromFolder(folderId: string): Promise<MendeleyDocument[]> {
-        const headers = this.getAuthHeaders();
+        const headers = this.getAuthHeaders(MendeleySync.DOCUMENT_TYPE);
         if (!headers) {
             throw new Error('Mendeley not configured');
         }
 
         const documents: MendeleyDocument[] = [];
         let marker: string | undefined;
-        const limit = 50;
+        // Mendeley does not expose the Link header to browsers, so paginating is
+        // impossible here; ask for the largest page the API allows instead.
+        const limit = 500;
 
         while (true) {
             const url = new URL(`${this.baseUrl}/documents`);
@@ -230,14 +238,16 @@ export class MendeleySync {
      * Fetch all documents from user's library
      */
     async fetchAllDocuments(): Promise<MendeleyDocument[]> {
-        const headers = this.getAuthHeaders();
+        const headers = this.getAuthHeaders(MendeleySync.DOCUMENT_TYPE);
         if (!headers) {
             throw new Error('Mendeley not configured');
         }
 
         const documents: MendeleyDocument[] = [];
         let marker: string | undefined;
-        const limit = 50;
+        // Mendeley does not expose the Link header to browsers, so paginating is
+        // impossible here; ask for the largest page the API allows instead.
+        const limit = 500;
 
         while (true) {
             const url = new URL(`${this.baseUrl}/documents`);
@@ -274,8 +284,8 @@ export class MendeleySync {
     async syncPapers(
         papers: PaperMetadata[],
         folderId?: string
-    ): Promise<{ success: number; skipped: number; failed: number }> {
-        const headers = this.getAuthHeaders();
+    ): Promise<{ success: number; skipped: number; failed: number; errors: string[] }> {
+        const headers = this.getAuthHeaders(MendeleySync.DOCUMENT_TYPE, true);
         if (!headers) {
             throw new Error('Mendeley not configured');
         }
@@ -283,6 +293,7 @@ export class MendeleySync {
         let success = 0;
         let skipped = 0;
         let failed = 0;
+        const errors: string[] = [];
 
         // Fetch existing documents for duplicate check
         let existingDocs: MendeleyDocument[] = [];
@@ -320,31 +331,36 @@ export class MendeleySync {
                     success++;
                 } else {
                     failed++;
+                    errors.push(`${paper.title}: HTTP ${response.status} ${response.statusText}`);
                 }
 
                 // Rate limiting
                 await new Promise(r => setTimeout(r, 200));
-            } catch (error) {
+            } catch (error: any) {
                 console.error(`Failed to sync paper ${paper.title}:`, error);
                 failed++;
+                errors.push(`${paper.title}: ${error?.message ?? error}`);
             }
         }
 
-        return { success, skipped, failed };
+        return { success, skipped, failed, errors };
     }
 
     /**
      * Add a document to a folder
      */
     private async addDocumentToFolder(docId: string, folderId: string): Promise<void> {
-        const headers = this.getAuthHeaders();
+        const headers = this.getAuthHeaders(MendeleySync.DOCUMENT_TYPE, true);
         if (!headers) throw new Error('Not authenticated');
 
-        await fetch(`${this.baseUrl}/folders/${folderId}/documents`, {
+        const response = await fetch(`${this.baseUrl}/folders/${folderId}/documents`, {
             method: 'POST',
             headers,
             body: JSON.stringify({ id: docId })
         });
+        if (!response.ok) {
+            throw new Error(`Could not add document to folder: HTTP ${response.status}`);
+        }
     }
 
     /**

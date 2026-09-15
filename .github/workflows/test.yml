@@ -29,7 +29,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install build hatch hatch-jupyter-builder hatch-nodejs-version jupyterlab>=4.0.0
+          pip install build hatch hatch-jupyter-builder hatch-nodejs-version "jupyterlab>=4.0.0" "tornado<6.5.9"
 
       - name: Install Node dependencies
         run: jlpm install || true
@@ -67,7 +67,7 @@ jobs:
       - name: Install Python dependencies
         run: |
           python -m pip install --upgrade pip
-          pip install build hatch hatch-jupyter-builder hatch-nodejs-version jupyterlab>=4.0.0
+          pip install build hatch hatch-jupyter-builder hatch-nodejs-version "jupyterlab>=4.0.0" "tornado<6.5.9"
 
       - name: Install Node dependencies and build
         run: |

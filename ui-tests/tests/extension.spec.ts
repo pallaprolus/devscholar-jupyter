@@ -6,7 +6,7 @@ const PALETTE_SHORTCUT = process.platform === 'darwin' ? 'Meta+Shift+c' : 'Contr
 // Helper function to wait for JupyterLab to load
 async function waitForJupyterLab(page: import('@playwright/test').Page) {
     await page.goto('/lab');
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded'); // JupyterLab polls constantly, so 'networkidle' never settles
     // Wait for JupyterLab shell to be ready
     await page.waitForSelector('#jp-main-content-panel', { timeout: 60000 });
     await page.waitForTimeout(1000);

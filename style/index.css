@@ -129,6 +129,11 @@ body.devscholar-hide-count .devscholar-has-papers::after {
     color: var(--jp-ui-font-color3);
 }
 
+/* Import picker */
+.devscholar-import-picker .devscholar-search-input {
+    margin-bottom: 8px;
+}
+
 /* Paper reference highlight */
 .devscholar-paper-reference {
     background-color: rgba(var(--jp-brand-color1-rgb), 0.15);

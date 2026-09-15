@@ -76,13 +76,13 @@ Preview paper PDFs directly inside JupyterLab:
 
 ### 7. Zotero Sync
 Two-way sync between your notebooks and Zotero library:
-- Export papers from notebooks to Zotero
-- Import citations from Zotero
+- Export papers from notebooks to Zotero: a preview lists every paper as new, already in your library, or similar title, and only ticked papers are written
+- Import citations from Zotero: pick items from a searchable list of your library and insert them into the active cell
 - Link workspaces to Zotero collections
-- Duplicate detection
+- Duplicate detection by DOI, arXiv ID and normalised title
 
 ### 8. Mendeley Sync
-Two-way sync with Mendeley:
+Two-way sync with Mendeley, with the same preview, picker and duplicate detection as Zotero:
 - Export papers to Mendeley
 - Import citations from Mendeley
 - Link workspaces to Mendeley folders
@@ -140,7 +140,7 @@ All commands are in the Command Palette under the *DevScholar* categories.
 | Search & Cite Paper | Search OpenAlex and insert a citation into the active cell (`Ctrl/Cmd+Shift+P`) |
 | Export Bibliography (BibTeX) | Copy BibTeX for all papers to the clipboard |
 | Preview Paper PDF | Open the PDF of the first paper that has one in a JupyterLab tab |
-| Set Zotero API Key · Sync Papers to Zotero · Link Zotero Collection · Import Papers from Zotero | Zotero sync |
+| Set Zotero API Key · Sync Papers to Zotero · Link Zotero Collection · Import Papers from Zotero | Zotero sync (sync shows a preview, import shows a picker) |
 | Set Mendeley Access Token · Sync Papers to Mendeley · Link Mendeley Folder · Import Papers from Mendeley | Mendeley sync |
 | DevScholar on GitHub · Report a DevScholar Issue | Project links, also in the Help menu |
 

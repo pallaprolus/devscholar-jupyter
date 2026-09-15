@@ -24,6 +24,7 @@ import { Widget } from '@lumino/widgets';
 import { zoteroSync, showCollectionSelector } from './zoteroSync';
 import { mendeleySync, showFolderSelector } from './mendeleySync';
 import { showSyncPreview } from './syncPreviewDialog';
+import { showImportPicker } from './importPickerDialog';
 
 /**
  * DevScholar extension ID
@@ -493,6 +494,34 @@ async function activateExtension(
         }
     });
 
+    /**
+     * Append citation lines for the chosen papers to the active cell
+     */
+    function insertCitations(panel: NotebookPanel, papers: PaperMetadata[] | null, service: string): void {
+        if (papers === null) {
+            return; // cancelled
+        }
+        if (papers.length === 0) {
+            Notification.info('DevScholar: nothing selected, no citations inserted', { autoClose: 3000 });
+            return;
+        }
+        const activeCell = panel.content.activeCell;
+        if (!activeCell) {
+            Notification.warning('DevScholar: select a cell to insert the citations into', { autoClose: 3000 });
+            return;
+        }
+        const isCodeCell = activeCell instanceof CodeCell;
+        const lines = papers.map(paper => formatCitationForInsertion(`${paper.type}:${paper.id}`, paper, isCodeCell));
+        const source = activeCell.model.sharedModel.getSource();
+        const separator = source === '' || source.endsWith('\n') ? '' : '\n';
+        activeCell.model.sharedModel.setSource(source + separator + lines.join('\n') + '\n');
+        onCellChanged(panel, activeCell);
+        Notification.success(
+            `DevScholar: inserted ${papers.length} citation${papers.length === 1 ? '' : 's'} from ${service}`,
+            { autoClose: 3000 }
+        );
+    }
+
     // ==================== Zotero Commands ====================
 
     const setZoteroKeyCommandID = 'devscholar:set-zotero-key';
@@ -640,21 +669,11 @@ async function activateExtension(
                     return;
                 }
 
-                // For now, just log the items - a full implementation would show a picker
-                console.log(`Found ${items.length} items in Zotero`);
-
-                // Convert first item as example and insert citation
-                const firstPaper = zoteroSync.mapFromZoteroItem(items[0]);
-                const activeCell = current.content.activeCell;
-                if (activeCell) {
-                    const isCodeCell = activeCell instanceof CodeCell;
-                    const citation = `${firstPaper.type}:${firstPaper.id}`;
-                    const formattedCitation = formatCitationForInsertion(citation, firstPaper, isCodeCell);
-
-                    const source = activeCell.model.sharedModel.getSource();
-                    const newSource = source + (source.endsWith('\n') ? '' : '\n') + formattedCitation + '\n';
-                    activeCell.model.sharedModel.setSource(newSource);
-                }
+                const chosen = await showImportPicker(
+                    'Zotero',
+                    items.map(item => zoteroSync.mapFromZoteroItem(item))
+                );
+                insertCitations(current, chosen, 'Zotero');
             } catch (error: any) {
                 showErrorMessage('Zotero Error', error.message);
             }
@@ -820,20 +839,11 @@ async function activateExtension(
                     return;
                 }
 
-                console.log(`Found ${docs.length} documents in Mendeley`);
-
-                // Convert first document as example and insert citation
-                const firstPaper = mendeleySync.mapFromMendeleyDocument(docs[0]);
-                const activeCell = current.content.activeCell;
-                if (activeCell) {
-                    const isCodeCell = activeCell instanceof CodeCell;
-                    const citation = `${firstPaper.type}:${firstPaper.id}`;
-                    const formattedCitation = formatCitationForInsertion(citation, firstPaper, isCodeCell);
-
-                    const source = activeCell.model.sharedModel.getSource();
-                    const newSource = source + (source.endsWith('\n') ? '' : '\n') + formattedCitation + '\n';
-                    activeCell.model.sharedModel.setSource(newSource);
-                }
+                const chosen = await showImportPicker(
+                    'Mendeley',
+                    docs.map(doc => mendeleySync.mapFromMendeleyDocument(doc))
+                );
+                insertCitations(current, chosen, 'Mendeley');
             } catch (error: any) {
                 showErrorMessage('Mendeley Error', error.message);
             }

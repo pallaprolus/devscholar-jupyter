@@ -30,6 +30,8 @@ export interface ZoteroItem {
         DOI?: string;
         url?: string;
         publicationTitle?: string;
+        archiveID?: string;
+        repository?: string;
         volume?: string;
         pages?: string;
         tags?: Array<{ tag: string }>;
@@ -393,9 +395,13 @@ export class ZoteroSync {
         if (extraMatch) id = extraMatch[1];
         if (typeMatch) type = typeMatch[1] as PaperMetadata['type'];
 
-        if (item.data.url?.includes('arxiv.org')) {
+        const archiveMatch = item.data.archiveID?.match(/arxiv:\s*(\d{4}\.\d{4,5}|[a-z-]+\/\d{7})/i);
+        if (archiveMatch) {
             type = 'arxiv';
-            const arxivMatch = item.data.url.match(/arxiv\.org\/(?:abs|pdf)\/(\d+\.\d+)/);
+            id = archiveMatch[1];
+        } else if (item.data.url?.includes('arxiv.org')) {
+            type = 'arxiv';
+            const arxivMatch = item.data.url.match(/arxiv\.org\/(?:abs|pdf)\/(\d{4}\.\d{4,5}|[a-z-]+\/\d{7})/i);
             if (arxivMatch) id = arxivMatch[1];
         }
 

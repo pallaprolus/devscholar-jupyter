@@ -10,12 +10,12 @@ import { INotebookTracker, NotebookPanel } from '@jupyterlab/notebook';
 import { Cell, CodeCell, MarkdownCell } from '@jupyterlab/cells';
 import { ISettingRegistry } from '@jupyterlab/settingregistry';
 import { Dialog, ICommandPalette, Notification, showDialog } from '@jupyterlab/apputils';
-import { EditorExtensionRegistry, IEditorExtensionRegistry } from '@jupyterlab/codemirror';
+import { CodeMirrorEditor, EditorExtensionRegistry, IEditorExtensionRegistry } from '@jupyterlab/codemirror';
 
 import { PaperReference, paperParser } from './paperParser';
 import { PaperMetadata, metadataClient } from './metadataClient';
 import { PaperHighlighter } from './highlighter';
-import { paperHighlightExtension } from './editorExtension';
+import { editorParseOptions, kindForMimeType, paperHighlightExtension, refreshDecorations } from './editorExtension';
 import { PaperTooltip } from './tooltip';
 import { showSearchCiteDialog, formatCitationForInsertion } from './searchCiteDialog';
 import { PdfPreviewManager } from './pdfPreview';
@@ -66,7 +66,10 @@ async function activateExtension(
     if (editorExtensions) {
         editorExtensions.addExtension({
             name: 'devscholar:paper-highlight',
-            factory: () => EditorExtensionRegistry.createImmutableExtension(paperHighlightExtension())
+            factory: options =>
+                EditorExtensionRegistry.createImmutableExtension(
+                    paperHighlightExtension(kindForMimeType(options.model.mimeType))
+                )
         });
     }
 
@@ -84,6 +87,22 @@ async function activateExtension(
                 metadataClient.setSemanticScholarApiKey(
                     (settings.get('semanticScholarApiKey').composite as string) ?? ''
                 );
+                editorParseOptions.codeCells = (settings.get('parseCodeCells').composite as boolean) ?? true;
+                editorParseOptions.markdownCells = (settings.get('parseMarkdownCells').composite as boolean) ?? true;
+                document.body.classList.toggle('devscholar-skip-code', !editorParseOptions.codeCells);
+                document.body.classList.toggle('devscholar-skip-markdown', !editorParseOptions.markdownCells);
+                // Re-scan open notebooks and rebuild editor decorations
+                notebookTracker.forEach(panel => {
+                    if (notebookPapers.has(panel)) {
+                        void processNotebook(panel);
+                    }
+                    panel.content.widgets.forEach(cell => {
+                        const editor = cell.editor;
+                        if (editor instanceof CodeMirrorEditor) {
+                            editor.editor.dispatch({ effects: refreshDecorations.of(null) });
+                        }
+                    });
+                });
             };
             window.addEventListener('devscholar:s2-key-rejected', () => {
                 Notification.warning(
@@ -107,12 +126,12 @@ async function activateExtension(
 
         // For code cells, only parse comments
         if (cell instanceof CodeCell) {
-            return paperParser.parseText(source, true);
+            return editorParseOptions.codeCells ? paperParser.parseText(source, true) : [];
         }
 
         // For markdown cells, parse everything
         if (cell instanceof MarkdownCell) {
-            return paperParser.parseText(source, false);
+            return editorParseOptions.markdownCells ? paperParser.parseText(source, false) : [];
         }
 
         return [];
@@ -156,6 +175,8 @@ async function activateExtension(
                 papers.forEach(paper => {
                     metadataClient.fetchMetadata(paper).catch(() => {});
                 });
+            } else {
+                highlighter.clearHighlights(cell);
             }
         });
 

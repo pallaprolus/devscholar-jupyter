@@ -128,38 +128,34 @@ described in [arxiv:1706.03762](https://arxiv.org/abs/1706.03762).
 
 ## Commands
 
+All commands are in the Command Palette under the *DevScholar* categories.
+
 | Command | Description |
 |---------|-------------|
-| `DevScholar: Show All Paper References` | List all papers found in the notebook |
-| `DevScholar: Search & Cite Paper` | Search and insert citations |
-| `DevScholar: Export Bibliography (BibTeX)` | Copy BibTeX for all papers |
+| Show All Paper References | Dialog listing every reference in the notebook with links |
+| Search & Cite Paper | Search OpenAlex and insert a citation into the active cell (`Ctrl/Cmd+Shift+P`) |
+| Export Bibliography (BibTeX) | Copy BibTeX for all papers to the clipboard |
+| Preview Paper PDF | Open the PDF of the first paper that has one in a JupyterLab tab |
+| Set Zotero API Key · Sync Papers to Zotero · Link Zotero Collection · Import Papers from Zotero | Zotero sync |
+| Set Mendeley Access Token · Sync Papers to Mendeley · Link Mendeley Folder · Import Papers from Mendeley | Mendeley sync |
+| DevScholar on GitHub · Report a DevScholar Issue | Project links, also in the Help menu |
 
 ## Settings
 
-Configure via Settings → Advanced Settings Editor → DevScholar:
+Configure via Settings → Settings Editor → DevScholar:
 
 | Setting | Default | Description |
 |---------|---------|-------------|
-| `highlightPapers` | `true` | Highlight paper references |
+| `highlightPapers` | `true` | Underline paper references in rendered markdown |
 | `showTooltips` | `true` | Show metadata on hover |
-| `parseCodeCells` | `true` | Detect papers in code comments |
-| `parseMarkdownCells` | `true` | Detect papers in markdown |
-| `prefetchMetadata` | `true` | Auto-fetch metadata |
-| `cacheMaxAge` | `7` | Cache duration in days |
+| `parseCodeCells` | `true` | Detect papers in code-cell comments |
+| `parseMarkdownCells` | `true` | Detect papers in markdown cells |
+| `showPaperCount` | `true` | Show the paper-count badge on cells with references |
+| `semanticScholarApiKey` | empty | Optional key that adds citation counts for arXiv papers |
 
 ## Related Projects
 
 - [DevScholar for VS Code](https://github.com/pallaprolus/dev-scholar) - The original VS Code extension
-
-## Roadmap
-
-- [x] Paper detection in code and markdown cells
-- [x] Hover metadata from arXiv, DOI, OpenAlex
-- [x] BibTeX export
-- [x] Search & cite dialog
-- [x] PDF preview panel
-- [x] Zotero/Mendeley sync
-
 
 ## Feedback
 

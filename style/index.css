@@ -129,6 +129,15 @@ body.devscholar-hide-count .devscholar-has-papers::after {
     background-color: rgba(var(--jp-brand-color1-rgb), 0.2);
 }
 
+/* Decorations already in an editor are hidden immediately when parsing is switched off */
+body.devscholar-skip-code .jp-CodeCell .cm-devscholar-paper,
+body.devscholar-skip-markdown .jp-MarkdownCell .cm-devscholar-paper {
+    border-bottom: none;
+    background-color: transparent;
+    cursor: auto;
+    pointer-events: none;
+}
+
 /* Search dialog styles */
 .devscholar-search-dialog {
     min-width: 550px;

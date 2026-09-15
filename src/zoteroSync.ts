@@ -165,7 +165,9 @@ export class ZoteroSync {
         }
 
         if (!response.ok) {
-            throw new Error(`Zotero API error: ${response.statusText}`);
+            throw new Error(
+                `Zotero API error: HTTP ${response.status} ${(await response.text()).slice(0, 200)}`.trim()
+            );
         }
 
         const data = await response.json();
@@ -194,7 +196,9 @@ export class ZoteroSync {
         });
 
         if (!response.ok) {
-            throw new Error(`Failed to create collection: ${response.statusText}`);
+            throw new Error(
+                `Failed to create collection: HTTP ${response.status} ${(await response.text()).slice(0, 200)}`.trim()
+            );
         }
 
         const data = await response.json();
@@ -223,16 +227,18 @@ export class ZoteroSync {
         const limit = 50;
 
         while (true) {
-            const url = new URL(`${this.baseUrl}/users/${userId}/collections/${collectionKey}/items`);
+            const url = new URL(`${this.baseUrl}/users/${userId}/collections/${collectionKey}/items/top`);
             url.searchParams.set('start', String(start));
             url.searchParams.set('limit', String(limit));
             url.searchParams.set('format', 'json');
-            url.searchParams.set('itemType', '-attachment -note');
+            url.searchParams.set('itemType', '-note');
 
             const response = await fetch(url.toString(), { headers });
 
             if (!response.ok) {
-                throw new Error(`Zotero API error: ${response.statusText}`);
+                throw new Error(
+                    `Zotero API error: HTTP ${response.status} ${(await response.text()).slice(0, 200)}`.trim()
+                );
             }
 
             const data = await response.json();
@@ -265,16 +271,18 @@ export class ZoteroSync {
         const limit = 50;
 
         while (true) {
-            const url = new URL(`${this.baseUrl}/users/${userId}/items`);
+            const url = new URL(`${this.baseUrl}/users/${userId}/items/top`);
             url.searchParams.set('start', String(start));
             url.searchParams.set('limit', String(limit));
             url.searchParams.set('format', 'json');
-            url.searchParams.set('itemType', '-attachment -note');
+            url.searchParams.set('itemType', '-note');
 
             const response = await fetch(url.toString(), { headers });
 
             if (!response.ok) {
-                throw new Error(`Zotero API error: ${response.statusText}`);
+                throw new Error(
+                    `Zotero API error: HTTP ${response.status} ${(await response.text()).slice(0, 200)}`.trim()
+                );
             }
 
             const data = await response.json();
@@ -339,11 +347,20 @@ export class ZoteroSync {
                 });
 
                 if (response.ok) {
-                    success++;
+                    // Zotero answers writes with 200 and a {successful, failed} body
+                    const body = await response.json().catch(() => null);
+                    const failures = body?.failed ? Object.values(body.failed) : [];
+                    if (failures.length > 0) {
+                        failed++;
+                        errors.push(`${paper.title}: ${(failures[0] as any)?.message ?? 'rejected by Zotero'}`);
+                    } else {
+                        success++;
+                    }
                 } else {
                     failed++;
-
-                    errors.push(`${paper.title}: HTTP ${response.status} ${response.statusText}`);
+                    errors.push(
+                        `${paper.title}: HTTP ${response.status} ${(await response.text()).slice(0, 120)}`.trim()
+                    );
                 }
 
                 // Rate limiting
@@ -452,13 +469,21 @@ export class ZoteroSync {
             title: paper.title,
             creators,
             abstractNote: paper.abstract,
-            publicationTitle: paper.venue || (paper.type === 'arxiv' ? 'arXiv' : ''),
             date: paper.year?.toString(),
-            url: paper.pdfUrl || paper.url,
+            url: paper.url || paper.pdfUrl,
             DOI: paper.doi,
             tags,
             extra: `DevScholar-Source: ${paper.type}\nDevScholar-ID: ${paper.id}`
         };
+
+        // Zotero validates fields per item type: publicationTitle exists only on
+        // journalArticle, preprints use repository/archiveID instead.
+        if (itemType === 'journalArticle') {
+            item.publicationTitle = paper.venue;
+        } else if (paper.type === 'arxiv') {
+            item.repository = 'arXiv';
+            item.archiveID = `arXiv:${paper.id}`;
+        }
 
         if (collectionKey) {
             item.collections = [collectionKey];

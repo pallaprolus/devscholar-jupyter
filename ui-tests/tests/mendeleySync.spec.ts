@@ -133,7 +133,7 @@ test.describe('Mendeley sync preview', () => {
 
         await dialog.locator('button:has-text("Add to Mendeley")').click();
 
-        const toast = page.locator('.jp-toast-message, .Toastify__toast-body').last();
+        const toast = page.locator('.jp-toast-message', { hasText: 'DevScholar' }).last();
         await expect(toast).toContainText('1 added', { timeout: 20000 });
 
         expect(posted).toHaveLength(1);
@@ -151,7 +151,7 @@ test.describe('Mendeley sync preview', () => {
             void (window as any).jupyterapp.commands.execute('devscholar:sync-mendeley');
         });
 
-        const toast = page.locator('.jp-toast-message, .Toastify__toast-body').last();
+        const toast = page.locator('.jp-toast-message', { hasText: 'DevScholar' }).last();
         await expect(toast).toContainText('rejected the access token', { timeout: 20000 });
         await expect(page.locator('.jp-Dialog')).toHaveCount(0);
         expect(posted).toHaveLength(0);

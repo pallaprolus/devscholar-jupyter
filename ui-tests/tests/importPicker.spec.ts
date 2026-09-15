@@ -103,7 +103,7 @@ test.describe('Import picker', () => {
 
         await dialog.locator('button:has-text("Insert citations")').click();
 
-        const toast = page.locator('.jp-toast-message, .Toastify__toast-body').last();
+        const toast = page.locator('.jp-toast-message', { hasText: 'DevScholar' }).last();
         await expect(toast).toContainText('inserted 1 citation', { timeout: 15000 });
 
         const source = await page.evaluate(() =>
